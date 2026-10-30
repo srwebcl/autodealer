@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+/*
+ * Tokens de marca AutoDealer.
+ * Amarillo y rojo tomados del logo oficial y del sitio estático anterior.
+ * El rojo sobre negro no alcanza 4.5:1: úsalo en superficies con texto blanco
+ * (botones) o en texto grande; no en texto pequeño sobre fondo oscuro.
+ */
+@theme {
+  --color-ink: #08090b;
+  --color-graphite-950: #0d0f12;
+  --color-graphite-900: #121418;
+  --color-graphite-800: #1a1d22;
+  --color-graphite-700: #25292f;
+  --color-graphite-600: #353a42;
+  --color-chalk: #f6f6f4;
+  --color-mist: #a9adb4;
+  --color-brand-yellow: #fff000;
+  --color-brand-red: #c8202c;
+  --color-brand-red-hover: #a91822;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-barlow), var(--font-inter), ui-sans-serif, sans-serif;
+
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+
+  --animate-rise: rise 0.8s var(--ease-out-quart) both;
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: var(--color-ink);
+    color: var(--color-chalk);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand-yellow);
+    outline-offset: 3px;
+  }
+
+  ::selection {
+    background-color: var(--color-brand-yellow);
+    color: var(--color-ink);
+  }
+}
+
+@layer components {
+  /* Franja diagonal amarillo/rojo: el gesto gráfico del logo. */
+  .brand-stripe {
+    display: inline-block;
+    width: 3.25rem;
+    height: 0.3rem;
+    background: linear-gradient(110deg, var(--color-brand-yellow) 0 50%, var(--color-brand-red) 50% 100%);
+    transform: skewX(-20deg);
+  }
+
+  .eyebrow {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--color-brand-yellow);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
