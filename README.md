@@ -159,7 +159,6 @@ tests/unit/                 # Vitest
 
 Busca `DraftBadge`, `draft` y `BORRADOR` en el código. Hoy incluye:
 
-- Horario de atención (`src/config/site.ts`).
 - Beneficios de la portada (`src/components/home/benefits.tsx`).
 - Textos de "Vende tu auto" y "Financiamiento".
 - Banda "¿Quieres vender o cambiar tu auto?".
@@ -167,7 +166,7 @@ Busca `DraftBadge`, `draft` y `BORRADOR` en el código. Hoy incluye:
 - Ícono del sitio (`src/app/icon.svg`), placeholder basado en las franjas del logo.
 - Los vehículos del seed (`prisma/demo-data.ts`) son **ficticios** (`isDemo`), se muestran con la etiqueta "Demo" y se borran con `npm run db:demo:clear`.
 
-Confirmados (tomados del sitio anterior): dirección, teléfono/WhatsApp, email, Instagram, logo y colores.
+Confirmados: dirección, teléfono/WhatsApp, email, Instagram, logo y colores (sitio anterior) y horario oficial Lun–Vie 08:30–18:30 · Sáb 10:00–14:00 (publicaciones de Instagram, confirmado por el cliente).
 
 ## Recursos
 

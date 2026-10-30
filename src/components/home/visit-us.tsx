@@ -1,6 +1,5 @@
 import { Container } from "@/components/layout/container";
 import { buttonClasses } from "@/components/ui/button-link";
-import { DraftBadge } from "@/components/ui/draft-badge";
 import { ArrowRightIcon, ClockIcon, InstagramIcon, MailIcon, PhoneIcon, PinIcon } from "@/components/ui/icons";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { siteConfig } from "@/config/site";
@@ -44,9 +43,7 @@ export function VisitUs() {
             <div className="flex items-start gap-4">
               <ClockIcon className="mt-1 shrink-0 text-brand-yellow" width={22} height={22} />
               <div>
-                <p className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-mist">
-                  Horario <DraftBadge label="Por confirmar" />
-                </p>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-mist">Horario</p>
                 <dl className="mt-2 space-y-1 text-sm">
                   {siteConfig.hours.map((h) => (
                     <div key={h.days}>

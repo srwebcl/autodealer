@@ -21,6 +21,7 @@ const base: VehicleDetailData = {
   features: [],
   images: [],
   instagramPermalink: null,
+  content: null,
   publishedAt: null,
   updatedAt: new Date(0),
 };

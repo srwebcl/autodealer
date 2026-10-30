@@ -99,6 +99,9 @@ model Vehicle {
   description  String?
   /// Lista de equipamiento: string[] validado con Zod.
   features     Json          @default("[]")
+  /// Descripción comercial estructurada (titular, intro, datos clave, equipamiento,
+  /// respaldo, cierre) tomada del caption original. Ver commercial-content.ts.
+  content      Json?
 
   status      VehicleStatus @default(AVAILABLE)
   published   Boolean       @default(false)

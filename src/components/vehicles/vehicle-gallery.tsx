@@ -18,7 +18,7 @@ export function VehicleGallery({ images, title }: { images: VehicleImageData[]; 
 
   if (count === 0) {
     return (
-      <div className="relative aspect-[4/3] overflow-hidden rounded-md border border-white/8 bg-graphite-800">
+      <div className="relative aspect-square overflow-hidden rounded-md border border-white/8 bg-graphite-800">
         <VehiclePhotoPlaceholder label="Fotos próximamente" />
       </div>
     );
@@ -58,14 +58,14 @@ export function VehicleGallery({ images, title }: { images: VehicleImageData[]; 
         onKeyDown={onKeyDown}
         onPointerDown={onPointerDown}
         onPointerUp={onPointerUp}
-        className="group relative aspect-[4/3] touch-pan-y overflow-hidden rounded-md border border-white/8 bg-graphite-800 select-none"
+        className="group relative aspect-square touch-pan-y overflow-hidden rounded-md border border-white/8 bg-graphite-800 select-none"
       >
         <Image
           key={current.src}
           src={current.src}
           alt={`${current.alt} – foto ${index + 1} de ${count}`}
           fill
-          sizes="(min-width: 1024px) 60vw, 100vw"
+          sizes="(min-width: 1024px) 640px, 100vw"
           preload={index === 0}
           fetchPriority={index === 0 ? "high" : undefined}
           className="object-cover"
@@ -95,7 +95,7 @@ export function VehicleGallery({ images, title }: { images: VehicleImageData[]; 
       </div>
 
       {count > 1 ? (
-        <ul className="mt-3 grid grid-cols-5 gap-2 sm:grid-cols-6" aria-label="Miniaturas">
+        <ul className="mt-3 grid grid-cols-5 gap-2" aria-label="Miniaturas">
           {images.map((img, i) => (
             <li key={img.src}>
               <button
@@ -103,11 +103,12 @@ export function VehicleGallery({ images, title }: { images: VehicleImageData[]; 
                 onClick={() => setIndex(i)}
                 aria-label={`Ver foto ${i + 1}`}
                 aria-current={i === index ? "true" : undefined}
-                className={`relative block aspect-[4/3] w-full overflow-hidden rounded-sm border-2 transition-opacity ${
+                className={`relative block aspect-square w-full overflow-hidden rounded-sm border-2 transition-opacity ${
                   i === index ? "border-brand-yellow" : "border-transparent opacity-60 hover:opacity-100"
                 }`}
               >
-                <Image src={img.src} alt="" fill sizes="120px" className="object-cover" />
+                {/* Carga inmediata: son pocas y pequeñas; con carga diferida quedaban celdas vacías. */}
+                <Image src={img.src} alt="" fill sizes="(min-width: 1024px) 130px, 20vw" loading="eager" className="object-cover" />
               </button>
             </li>
           ))}

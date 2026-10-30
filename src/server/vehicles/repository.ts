@@ -10,7 +10,12 @@ import {
   publicVehicleBase,
 } from "@/lib/vehicles/filters";
 import { drivetrainLabels, fuelTypeLabels, transmissionLabels } from "@/lib/vehicles/labels";
+import type { CommercialContent } from "@/lib/instagram/commercial-content";
 import type { VehicleCardData, VehicleDetailData } from "@/types/vehicle";
+
+function asContent(value: unknown): CommercialContent | null {
+  return value && typeof value === "object" && (value as { version?: unknown }).version === 1 ? (value as CommercialContent) : null;
+}
 
 /**
  * Consultas del catálogo público. Reciben el cliente como parámetro para poder
@@ -148,6 +153,7 @@ export async function findVehicleBySlug(db: Db, slug: string, includeDemo: boole
     features,
     images,
     instagramPermalink: row.instagramPost?.permalink ?? null,
+    content: asContent(row.content),
     publishedAt: row.publishedAt,
     updatedAt: row.updatedAt,
   };

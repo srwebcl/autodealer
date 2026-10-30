@@ -13,18 +13,21 @@ afterAll(() => db?.$disconnect());
 const list = (q: Record<string, string> = {}) => listVehicles(db!, parseCatalogFilters(q), true);
 
 describe.skipIf(!db)("catálogo público (datos demo)", () => {
+  // Las aserciones se limitan a los datos demo: la base puede tener además vehículos reales.
   it("excluye vendidos y no publicados", async () => {
-    const { vehicles, total } = await list();
+    const { vehicles } = await list();
     const slugs = vehicles.map((v) => v.slug);
-    expect(total).toBe(5);
+    expect(slugs.filter((s) => s.startsWith("demo-"))).toHaveLength(5);
     expect(slugs).not.toContain("demo-kia-sportage-2018"); // SOLD
     expect(slugs).not.toContain("demo-suzuki-swift-2023"); // sin precio → no publicado
     expect(vehicles.every((v) => v.status === "AVAILABLE" || v.status === "RESERVED")).toBe(true);
   });
 
-  it("sin demo no muestra nada (producción)", async () => {
-    const { total } = await listVehicles(db!, parseCatalogFilters({}), false);
-    expect(total).toBe(0);
+  it("sin demo no muestra ningún vehículo demo (producción)", async () => {
+    const { vehicles, total } = await listVehicles(db!, parseCatalogFilters({}), false);
+    expect(vehicles.some((v) => v.isDemo)).toBe(false);
+    const realVisible = await db!.vehicle.count({ where: { isDemo: false, published: true, status: { in: ["AVAILABLE", "RESERVED"] } } });
+    expect(total).toBe(realVisible);
   });
 
   it("filtros combinados", async () => {
@@ -60,10 +63,12 @@ describe.skipIf(!db)("catálogo público (datos demo)", () => {
 
   it("facetas solo con valores existentes", async () => {
     const f = await getFacets(db!, true);
-    expect(f.makes.map((m) => m.value)).not.toContain("Kia"); // vendido
-    expect(f.makes.map((m) => m.value)).not.toContain("Suzuki"); // no publicado
-    expect(f.yearMin).toBe(2019);
-    expect(f.fuelTypes.map((x) => x.value).sort()).toEqual(["DIESEL", "GASOLINE"]);
+    const visible = await db!.vehicle.findMany({ where: { published: true, status: { in: ["AVAILABLE", "RESERVED"] } } });
+    const makes = f.makes.map((m) => m.value);
+    expect(makes.sort()).toEqual([...new Set(visible.map((v) => v.make))].sort());
+    expect(makes).not.toContain("Kia"); // solo existe vendido
+    expect(makes).not.toContain("Suzuki"); // solo existe no publicado
+    expect(f.yearMin).toBe(Math.min(...visible.map((v) => v.year!).filter(Boolean)));
   });
 
   it("ficha: vendido visible, no publicado y retirado ocultos", async () => {
@@ -84,7 +89,7 @@ describe.skipIf(!db)("catálogo público (datos demo)", () => {
 
   it("slugs indexables no incluyen vendidos", async () => {
     const slugs = (await listIndexableSlugs(db!, true)).map((s) => s.slug);
-    expect(slugs).toHaveLength(5);
+    expect(slugs.filter((s) => s.startsWith("demo-"))).toHaveLength(5);
     expect(slugs).not.toContain("demo-kia-sportage-2018");
   });
 });

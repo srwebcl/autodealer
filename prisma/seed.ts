@@ -9,7 +9,7 @@ assertSafeToSeed();
 const db = createPrismaClient(requireDatabaseUrl());
 
 async function main() {
-  // Datos comerciales confirmados (sitio anterior). El horario es provisional.
+  // Datos comerciales confirmados (sitio anterior y publicaciones de Instagram).
   await db.siteSettings.upsert({
     where: { id: 1 },
     update: {},
@@ -24,10 +24,10 @@ async function main() {
       instagramHandle: "@autodealer.cl",
       instagramUrl: "https://www.instagram.com/autodealer.cl/",
       hours: [
-        { days: "Lunes a viernes", time: "10:00 – 19:00" },
-        { days: "Sábado", time: "10:00 – 14:00" },
+        { days: "Lunes a viernes", time: "08:30 a 18:30 hrs." },
+        { days: "Sábado", time: "10:00 a 14:00 hrs." },
       ],
-      draftFields: ["hours"],
+      draftFields: [],
     },
   });
 

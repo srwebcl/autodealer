@@ -7,7 +7,7 @@ export function CatalogSkeleton() {
         <ul className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }, (_, i) => (
             <li key={i} className="overflow-hidden rounded-md border border-white/8 bg-graphite-900">
-              <div className="aspect-[4/3] animate-pulse bg-graphite-800" />
+              <div className="aspect-square animate-pulse bg-graphite-800" />
               <div className="space-y-3 p-5">
                 <div className="h-3 w-16 animate-pulse rounded bg-graphite-700" />
                 <div className="h-6 w-2/3 animate-pulse rounded bg-graphite-700" />

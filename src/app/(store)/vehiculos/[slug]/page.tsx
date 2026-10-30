@@ -6,6 +6,7 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { buttonClasses } from "@/components/ui/button-link";
 import { InstagramIcon, PhoneIcon, WhatsAppIcon } from "@/components/ui/icons";
 import { SectionHeading } from "@/components/ui/section-heading";
+import { CommercialDescription } from "@/components/vehicles/commercial-description";
 import { StatusBadge } from "@/components/vehicles/status-badge";
 import { VehicleGallery } from "@/components/vehicles/vehicle-gallery";
 import { VehicleGrid } from "@/components/vehicles/vehicle-grid";
@@ -101,9 +102,12 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[slu
         </nav>
 
         {v.isDemo ? (
-          <p role="note" className="mb-6 rounded-sm border border-dashed border-brand-yellow/50 bg-brand-yellow/5 px-4 py-3 text-sm">
-            <strong className="text-brand-yellow">Demo:</strong> ficha ficticia para revisar el diseño. No es un vehículo
-            real.
+          <p
+            role="note"
+            className="mb-6 rounded-sm border border-dashed border-brand-yellow/50 bg-brand-yellow/5 px-4 py-3 text-sm"
+          >
+            <strong className="text-brand-yellow">Demo:</strong> ficha ficticia para revisar el diseño. No es un
+            vehículo real.
           </p>
         ) : null}
         {sold ? (
@@ -112,7 +116,7 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[slu
           </p>
         ) : null}
 
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,1.6fr)_minmax(20rem,1fr)] lg:gap-12">
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,1.25fr)_minmax(20rem,1fr)] lg:gap-12">
           <VehicleGallery images={v.images} title={name} />
 
           <div>
@@ -137,11 +141,24 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[slu
               <div className="mt-6 rounded-md border border-white/10 bg-graphite-900 p-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-mist">Precio</p>
                 <p className="mt-1 font-display text-5xl leading-none font-bold tracking-tight">
-                  {sold ? <span className="text-chalk/50 line-through">{price ?? "Vendido"}</span> : (price ?? "Consultar")}
+                  {sold ? (
+                    <span className="text-chalk/50 line-through">{price ?? "Vendido"}</span>
+                  ) : (
+                    (price ?? "Consultar")
+                  )}
                 </p>
                 <div className="mt-5 flex flex-col gap-3">
-                  <a href={waHref} target="_blank" rel="noopener noreferrer" className={buttonClasses("whatsapp", "lg", "w-full")}>
-                    <WhatsAppIcon /> {sold ? "Buscar uno similar" : "Consultar por WhatsApp"}
+                  <a
+                    href={waHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={buttonClasses(
+                      "whatsapp",
+                      "lg",
+                      "w-full whitespace-nowrap px-4 text-[0.82rem] tracking-[0.04em] sm:text-[0.95rem] sm:tracking-[0.08em]",
+                    )}
+                  >
+                    <WhatsAppIcon className="shrink-0" /> {sold ? "Buscar uno similar" : "Consultar por WhatsApp"}
                   </a>
                   <a href={`tel:${siteConfig.phoneE164}`} className={buttonClasses("outline", "lg", "w-full")}>
                     <PhoneIcon /> Llamar
@@ -163,52 +180,58 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[slu
           </div>
         </div>
 
-        <div className="mt-16 grid gap-12 lg:grid-cols-[minmax(0,1.6fr)_minmax(20rem,1fr)] lg:gap-12">
-          <div className="space-y-12">
-            <section aria-labelledby="specs-title">
-              <h2 id="specs-title" className="font-display text-3xl font-extrabold uppercase italic">
-                Ficha técnica
-              </h2>
-              <dl className="mt-6 grid gap-x-8 sm:grid-cols-3 sm:gap-y-6">
-                <Spec label="Marca" value={v.make} />
-                <Spec label="Modelo" value={v.model} />
-                <Spec label="Versión" value={v.version} />
-                <Spec label="Año" value={v.year ? String(v.year) : null} />
-                <Spec label="Kilometraje" value={formatKm(v.mileageKm)} />
-                <Spec label="Motor" value={v.engine} />
-                <Spec label="Combustible" value={v.fuelType} />
-                <Spec label="Transmisión" value={v.transmission} />
-                <Spec label="Tracción" value={v.drivetrain} />
-                <Spec label="Color" value={v.color} />
-              </dl>
-            </section>
-
-            {v.description ? (
-              <section aria-labelledby="desc-title">
-                <h2 id="desc-title" className="font-display text-3xl font-extrabold uppercase italic">
-                  Descripción
-                </h2>
-                <p className="mt-4 leading-relaxed whitespace-pre-line text-chalk/85">{v.description}</p>
-              </section>
-            ) : null}
-
-            {v.features.length > 0 ? (
-              <section aria-labelledby="features-title">
-                <h2 id="features-title" className="font-display text-3xl font-extrabold uppercase italic">
-                  Equipamiento
-                </h2>
-                <ul className="mt-5 grid gap-x-6 gap-y-3 sm:grid-cols-2">
-                  {v.features.map((f) => (
-                    <li key={f} className="flex items-start gap-3 text-chalk/85">
-                      <span aria-hidden className="mt-2 h-1 w-3 shrink-0 -skew-x-[20deg] bg-brand-yellow" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ) : null}
+        {v.content ? (
+          <div className="mt-16 max-w-5xl">
+            <CommercialDescription content={v.content} whatsappHref={waHref} />
           </div>
-        </div>
+        ) : (
+          <div className="mt-16 grid gap-12 lg:grid-cols-[minmax(0,1.6fr)_minmax(20rem,1fr)] lg:gap-12">
+            <div className="space-y-12">
+              <section aria-labelledby="specs-title">
+                <h2 id="specs-title" className="font-display text-3xl font-extrabold uppercase italic">
+                  Ficha técnica
+                </h2>
+                <dl className="mt-6 grid gap-x-8 sm:grid-cols-3 sm:gap-y-6">
+                  <Spec label="Marca" value={v.make} />
+                  <Spec label="Modelo" value={v.model} />
+                  <Spec label="Versión" value={v.version} />
+                  <Spec label="Año" value={v.year ? String(v.year) : null} />
+                  <Spec label="Kilometraje" value={formatKm(v.mileageKm)} />
+                  <Spec label="Motor" value={v.engine} />
+                  <Spec label="Combustible" value={v.fuelType} />
+                  <Spec label="Transmisión" value={v.transmission} />
+                  <Spec label="Tracción" value={v.drivetrain} />
+                  <Spec label="Color" value={v.color} />
+                </dl>
+              </section>
+
+              {v.description ? (
+                <section aria-labelledby="desc-title">
+                  <h2 id="desc-title" className="font-display text-3xl font-extrabold uppercase italic">
+                    Descripción
+                  </h2>
+                  <p className="mt-4 leading-relaxed whitespace-pre-line text-chalk/85">{v.description}</p>
+                </section>
+              ) : null}
+
+              {v.features.length > 0 ? (
+                <section aria-labelledby="features-title">
+                  <h2 id="features-title" className="font-display text-3xl font-extrabold uppercase italic">
+                    Equipamiento
+                  </h2>
+                  <ul className="mt-5 grid gap-x-6 gap-y-3 sm:grid-cols-2">
+                    {v.features.map((f) => (
+                      <li key={f} className="flex items-start gap-3 text-chalk/85">
+                        <span aria-hidden className="mt-2 h-1 w-3 shrink-0 -skew-x-[20deg] bg-brand-yellow" />
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+            </div>
+          </div>
+        )}
       </Container>
 
       {related.length > 0 ? (

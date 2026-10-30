@@ -25,7 +25,7 @@ export function VehicleCard({ vehicle, headingLevel = 3 }: { vehicle: VehicleCar
 
   return (
     <article className="group relative flex flex-col overflow-hidden rounded-md border border-white/8 bg-graphite-900 transition-[border-color,transform,box-shadow] duration-300 ease-out-quart hover:-translate-y-1 hover:border-white/20 hover:shadow-[0_24px_50px_-20px_rgba(0,0,0,0.8)]">
-      <div className="relative aspect-[4/3] overflow-hidden bg-graphite-800">
+      <div className="relative aspect-square overflow-hidden bg-graphite-800">
         {vehicle.image ? (
           <Image
             src={vehicle.image.src}

@@ -1,8 +1,9 @@
 import { createHash, randomUUID } from "node:crypto";
-import type { Prisma, PrismaClient } from "@/generated/prisma/client";
+import { Prisma, type PrismaClient } from "@/generated/prisma/client";
 import type { InstagramPost, SyncTrigger } from "@/generated/prisma/client";
 import { InstagramApiError, type InstagramClient } from "@/lib/instagram/client";
 import { describeUrl, downloadImage } from "@/lib/instagram/download";
+import { featureList, parseCommercialContent, plainDescription } from "@/lib/instagram/commercial-content";
 import { looksLikeVehicle, parseCaption, publishBlockers, type ParsedVehicle } from "@/lib/instagram/parse-caption";
 import type { IgChildMedia, IgMedia } from "@/lib/instagram/types";
 import { instagramImageKey, type ObjectStorage } from "@/lib/storage/r2";
@@ -127,14 +128,34 @@ const SYNCED_FIELDS = [
   "color",
   "description",
   "features",
+  "content",
 ] as const;
 
-function vehicleDataFromParsed(v: ParsedVehicle, locked: string[]): Partial<Prisma.VehicleUncheckedCreateInput> {
+/** Datos del vehículo derivados del caption (campos técnicos + contenido comercial estructurado). */
+export function vehicleDataFromCaption(caption: string | null | undefined, v: ParsedVehicle, locked: string[]): Partial<Prisma.VehicleUncheckedCreateInput> {
+  const content = parseCommercialContent(caption);
+  const derived: Record<(typeof SYNCED_FIELDS)[number], unknown> = {
+    make: v.make,
+    model: v.model,
+    version: v.version,
+    year: v.year,
+    mileageKm: v.mileageKm,
+    priceClp: v.priceClp,
+    engine: v.engine,
+    fuelType: v.fuelType,
+    transmission: v.transmission,
+    drivetrain: v.drivetrain,
+    color: v.color,
+    description: (content && plainDescription(content)) ?? v.description,
+    features: content && featureList(content).length ? featureList(content) : v.features,
+    content: content ?? undefined,
+  };
   const data: Record<string, unknown> = {};
   for (const field of SYNCED_FIELDS) {
     if (locked.includes(field)) continue;
     // null explícito si el caption ya no trae el dato: no se conserva un valor viejo no respaldado.
-    data[field] = field === "features" ? v.features : (v[field] ?? null);
+    const value = derived[field];
+    data[field] = value === undefined ? (field === "content" ? Prisma.DbNull : null) : value;
   }
   return data as Partial<Prisma.VehicleUncheckedCreateInput>;
 }
@@ -364,7 +385,7 @@ async function processPost(a: ProcessArgs): Promise<ProcessOutcome> {
   }
   const canPublish = blockers.length === 0;
   const locked = existingVehicle?.lockedFields ?? [];
-  const data = vehicleDataFromParsed(parsed.vehicle, locked);
+  const data = vehicleDataFromCaption(media.caption, parsed.vehicle, locked);
   const extraction = {
     parsedAt: new Date().toISOString(),
     provenance: parsed.provenance,

@@ -23,6 +23,8 @@ export interface VehicleCardData {
   isDemo?: boolean;
 }
 
+import type { CommercialContent } from "@/lib/instagram/commercial-content";
+
 export interface VehicleImageData {
   src: string;
   alt: string;
@@ -39,6 +41,8 @@ export interface VehicleDetailData extends VehicleCardData {
   features: string[];
   images: VehicleImageData[];
   instagramPermalink: string | null;
+  /** Descripción comercial estructurada desde el caption (null si no hay). */
+  content: CommercialContent | null;
   publishedAt: Date | null;
   updatedAt: Date;
 }

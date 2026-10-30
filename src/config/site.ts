@@ -24,11 +24,13 @@ export const siteConfig = {
   instagramHandle: "@autodealer.cl",
   instagramUrl: "https://www.instagram.com/autodealer.cl/",
 
-  // draft: horario provisional, pendiente de confirmar
+  // confirmed: horario oficial (publicaciones de Instagram, confirmado por el cliente)
   hours: [
-    { days: "Lunes a viernes", time: "10:00 – 19:00" },
-    { days: "Sábado", time: "10:00 – 14:00" },
+    { days: "Lunes a viernes", time: "08:30 a 18:30 hrs." },
+    { days: "Sábado", time: "10:00 a 14:00 hrs." },
   ],
+  // confirmed: dirección con referencia, tal como la usa AutoDealer en sus publicaciones
+  addressWithReference: "Av. Balmaceda 1595, esquina Huanhualí, frente a Iglesia de Lourdes, La Serena",
 } as const;
 
 export const mainNav = [
