@@ -34,6 +34,13 @@ export interface SyncOptions {
   autoPublishSince: Date | null;
   /** Prueba controlada: procesar solo estos IDs de publicación. */
   onlyMediaIds?: string[];
+  /**
+   * Retiro automático: si la publicación de un vehículo visible desaparece de Instagram
+   * (borrada o archivada) en `afterMisses` sincronizaciones completas seguidas, el vehículo
+   * pasa a WITHDRAWN. Si en una ejecución faltan más de `maxPerRun`, se asume una anomalía
+   * de la API y no se retira nada. null = desactivado.
+   */
+  withdrawMissing: { afterMisses: number; maxPerRun: number } | null;
 }
 
 export const DEFAULT_SYNC_OPTIONS: Omit<SyncOptions, "since" | "autoPublishSince"> = {
@@ -42,6 +49,7 @@ export const DEFAULT_SYNC_OPTIONS: Omit<SyncOptions, "since" | "autoPublishSince
   maxStorageBytes: 8 * 1024 ** 3,
   maxAttempts: 5,
   lockTtlMs: 10 * 60_000,
+  withdrawMissing: null,
 };
 
 export interface SyncDeps {
@@ -66,6 +74,9 @@ export interface SyncStats {
   imagesReused: number;
   imagesRemoved: number;
   deferred: number;
+  missing: number;
+  withdrawn: number;
+  restored: number;
 }
 
 export type SyncResult =
@@ -86,6 +97,9 @@ const emptyStats = (): SyncStats => ({
   imagesReused: 0,
   imagesRemoved: 0,
   deferred: 0,
+  missing: 0,
+  withdrawn: 0,
+  restored: 0,
 });
 
 // ─── Candado ──────────────────────────────────────────────────────────
@@ -187,6 +201,8 @@ export async function runSync(deps: SyncDeps, trigger: SyncTrigger, opts: SyncOp
   ) => db.syncLog.create({ data: { runId: run.id, postId: postId ?? null, level, eventType, message, details } });
 
   let fatal: string | undefined;
+  // IDs vistos en el feed dentro de la ventana `since` (para detectar publicaciones borradas).
+  const seenIds = new Set<string>();
   try {
     await log("INFO", "sync.started", `Sincronización ${trigger.toLowerCase()} iniciada`, null, {
       since: opts.since.toISOString(),
@@ -199,6 +215,7 @@ export async function runSync(deps: SyncDeps, trigger: SyncTrigger, opts: SyncOp
       for (const media of page) {
         const published = new Date(media.timestamp);
         if (published < opts.since) break scan; // la API devuelve de más reciente a más antigua
+        seenIds.add(media.id);
         if (opts.onlyMediaIds && !opts.onlyMediaIds.includes(media.id)) continue;
         stats.seen++;
 
@@ -243,6 +260,15 @@ export async function runSync(deps: SyncDeps, trigger: SyncTrigger, opts: SyncOp
         }
       }
     }
+
+    // Solo con un recorrido completo del feed (sin error fatal ni filtro de prueba).
+    if (opts.withdrawMissing && !opts.onlyMediaIds) {
+      const r = await reconcileMissing(db, seenIds, opts.since, opts.withdrawMissing, log);
+      stats.missing = r.missing;
+      stats.withdrawn = r.withdrawn;
+      stats.restored = r.restored;
+      if (r.withdrawn || r.restored) changed = true;
+    }
   } catch (err) {
     fatal = errorMessage(err);
     await log("ERROR", "sync.failed", fatal);
@@ -258,6 +284,98 @@ export async function runSync(deps: SyncDeps, trigger: SyncTrigger, opts: SyncOp
 
   const status = fatal ? "FAILED" : stats.errors > 0 ? "PARTIAL" : "SUCCESS";
   return { status, runId: run.id, stats, error: fatal, changed };
+}
+
+// ─── Publicaciones que desaparecen de Instagram ───────────────────────
+
+type SyncLogFn = (level: "INFO" | "WARN" | "ERROR", eventType: string, message: string, postId?: string | null, details?: Prisma.InputJsonValue) => Promise<unknown>;
+
+/**
+ * Instagram no informa ventas: la señal disponible es que la publicación se borre o archive.
+ * - Vehículo visible cuya publicación (dentro de `since`) no aparece → suma una ausencia;
+ *   al llegar a `afterMisses` seguidas se retira (WITHDRAWN). Fotos y datos se conservan.
+ * - Si la publicación vuelve a aparecer: se reinicia el contador y, si el retiro fue
+ *   automático y nadie cambió el estado después, el vehículo vuelve a AVAILABLE.
+ */
+export async function reconcileMissing(
+  db: PrismaClient,
+  seenIds: Set<string>,
+  since: Date,
+  rule: { afterMisses: number; maxPerRun: number },
+  log: SyncLogFn,
+): Promise<{ missing: number; withdrawn: number; restored: number }> {
+  const out = { missing: 0, withdrawn: 0, restored: 0 };
+  const seen = [...seenIds];
+
+  // Reaparecidas: reiniciar contador y deshacer retiros automáticos.
+  const back = await db.instagramPost.findMany({
+    where: { instagramMediaId: { in: seen }, OR: [{ missingCount: { gt: 0 } }, { autoWithdrawnAt: { not: null } }] },
+    include: { vehicle: { select: { id: true, status: true } } },
+  });
+  for (const post of back) {
+    const restore = post.autoWithdrawnAt && post.vehicle?.status === "WITHDRAWN";
+    await db.$transaction([
+      db.instagramPost.update({ where: { id: post.id }, data: { missingCount: 0, autoWithdrawnAt: null } }),
+      ...(restore
+        ? [
+            db.vehicle.update({ where: { id: post.vehicle!.id }, data: { status: "AVAILABLE" } }),
+            db.auditLog.create({
+              data: { action: "vehicle.auto_restored", entityType: "Vehicle", entityId: post.vehicle!.id, details: { instagramMediaId: post.instagramMediaId, via: "sync" } },
+            }),
+          ]
+        : []),
+    ]);
+    if (restore) {
+      out.restored++;
+      await log("INFO", "vehicle.restored", "Publicación visible otra vez en Instagram: vehículo restaurado", post.id);
+    }
+  }
+
+  // Ausentes: solo vehículos visibles importados de publicaciones dentro de la ventana.
+  const absent = await db.instagramPost.findMany({
+    where: {
+      instagramMediaId: { notIn: seen },
+      publishedAt: { gte: since },
+      vehicle: { is: { published: true, status: { in: ["AVAILABLE", "RESERVED"] } } },
+    },
+    include: { vehicle: { select: { id: true, status: true, make: true, model: true, year: true } } },
+  });
+  out.missing = absent.length;
+  if (!absent.length) return out;
+  if (seen.length === 0 || absent.length > rule.maxPerRun) {
+    await log("WARN", "sync.missing_anomaly", `Faltan ${absent.length} publicaciones de vehículos visibles: posible anomalía de la API, no se retira nada`, null, {
+      missing: absent.length,
+      seen: seen.length,
+      maxPerRun: rule.maxPerRun,
+    });
+    return out;
+  }
+
+  for (const post of absent) {
+    const v = post.vehicle!;
+    const misses = post.missingCount + 1;
+    const label = [v.make, v.model, v.year].filter(Boolean).join(" ");
+    if (misses < rule.afterMisses) {
+      await db.instagramPost.update({ where: { id: post.id }, data: { missingCount: misses } });
+      await log("WARN", "post.missing", `${label}: la publicación no aparece en Instagram (${misses}/${rule.afterMisses})`, post.id);
+      continue;
+    }
+    await db.$transaction([
+      db.instagramPost.update({ where: { id: post.id }, data: { missingCount: misses, autoWithdrawnAt: new Date() } }),
+      db.vehicle.update({ where: { id: v.id }, data: { status: "WITHDRAWN" } }),
+      db.auditLog.create({
+        data: {
+          action: "vehicle.auto_withdrawn",
+          entityType: "Vehicle",
+          entityId: v.id,
+          details: { instagramMediaId: post.instagramMediaId, previousStatus: v.status, misses, via: "sync" },
+        },
+      }),
+    ]);
+    out.withdrawn++;
+    await log("WARN", "vehicle.withdrawn", `${label} retirado: la publicación ya no está en Instagram`, post.id);
+  }
+  return out;
 }
 
 // ─── Procesamiento de una publicación ─────────────────────────────────

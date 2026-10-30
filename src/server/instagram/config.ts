@@ -36,5 +36,7 @@ export function syncOptionsFrom(c: InstagramConfig): SyncOptions {
     since: new Date(`${c.INSTAGRAM_SYNC_SINCE}T00:00:00-03:00`),
     autoPublishSince: c.INSTAGRAM_AUTO_PUBLISH_SINCE ? new Date(`${c.INSTAGRAM_AUTO_PUBLISH_SINCE}T00:00:00-03:00`) : null,
     ...(c.INSTAGRAM_SYNC_MAX_POSTS ? { maxPostsPerRun: c.INSTAGRAM_SYNC_MAX_POSTS } : {}),
+    // Dos ausencias seguidas (cron cada hora ≈ 1–2 h) evitan retirar por un fallo puntual.
+    withdrawMissing: { afterMisses: 2, maxPerRun: 5 },
   };
 }

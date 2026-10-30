@@ -103,7 +103,7 @@ npm run ig:token [-- --refresh]  # estado del token (fechas) / renovación manua
 - **Token:** se guarda cifrado (AES-256-GCM, `TOKEN_ENCRYPTION_KEY`) en `IntegrationCredential`. Se renueva con el endpoint oficial de Instagram Login (`refresh_access_token`): primera vez 24 h después de guardarlo (edad desconocida del token del panel) y luego cada 50 días. El token renovado se valida con `GET /me` (mismo `user_id`) antes de reemplazar el vigente; si falla, se conserva el vigente, se registra `token.refresh_failed` (ERROR) en `SyncLog` y en los logs de Vercel. Con menos de 7 días para vencer se registra `token.expiring`. Si cambias `INSTAGRAM_ACCESS_TOKEN` a mano, se adopta solo si es válido.
 - **"Caption bien interpretado":** además de los datos obligatorios, se bloquea la publicación automática si hay advertencias sobre campos obligatorios (varios precios, precio/año no interpretables, marca no reconocida) o confianza < 0,7.
 
-- **Sincronización:** `GET|POST /api/instagram/sync` con `Authorization: Bearer $CRON_SECRET`. El cron horario está desactivado hasta autorización.
+- **Sincronización:** `GET|POST /api/instagram/sync` con `Authorization: Bearer $CRON_SECRET`. Vercel Cron la ejecuta cada hora (minuto 5).
 - **Sin webhooks:** Meta no ofrece un webhook de publicaciones nuevas propias; se usa sondeo programado.
 - **Fecha de corte:** `INSTAGRAM_SYNC_SINCE` (obligatoria) limita qué publicaciones se leen.
 - **Publicación automática:** solo para publicaciones desde `INSTAGRAM_AUTO_PUBLISH_SINCE`. Si está vacía, **nada se publica solo**; lo histórico queda como borrador "disponibilidad no confirmada".
@@ -113,7 +113,8 @@ npm run ig:token [-- --refresh]  # estado del token (fechas) / renovación manua
 - **Costos:** tope interno de 8 GB en R2 (plan gratuito: 10 GB), máx. 15 publicaciones por ejecución, imágenes ≤ 10 MB.
 - **Imágenes:** se sirven desde el propio sitio en `/media/instagram/<post>/<foto>.jpg`. La ruta lee el bucket R2 de forma privada (API S3) y responde con caché de un año (`immutable`), así la CDN de Vercel las entrega y R2 solo se lee en el primer acceso. No depende de `r2.dev` ni de DNS y funciona igual en vercel.app y en el dominio final. En Neon se guarda `storageKey` (fuente de verdad) y `publicUrl` (`/media/<clave>`).
 - **Renovación del token:** `GET /api/instagram/token` (Vercel Cron diario 11:20 UTC, protegido con `CRON_SECRET`). Solo llama a Meta cuando corresponde. `/api/health` informa `instagramToken: ok | expiring | failing | missing` sin secretos.
-- **Cron de sincronización:** desactivado (no está en `vercel.json`). Se activa solo con autorización.
+- **Cron de sincronización:** cada hora (`5 * * * *` en `vercel.json`). Meta no avisa de publicaciones nuevas: un auto subido a Instagram aparece en la web en máximo ~1 hora.
+- **Retiro automático:** Instagram no informa ventas. Si la publicación de un vehículo visible desaparece (borrada o archivada) en **2 sincronizaciones completas seguidas**, el vehículo pasa a `WITHDRAWN` (sale del catálogo; fotos y datos se conservan) y queda en `AuditLog` (`vehicle.auto_withdrawn`). Si la publicación vuelve, se restaura a `AVAILABLE`, salvo que alguien haya cambiado el estado después. Si faltan más de 5 a la vez o la API falla, no se retira nada (anomalía registrada en `SyncLog`).
 
 ## Variables de entorno
 

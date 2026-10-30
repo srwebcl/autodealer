@@ -168,6 +168,10 @@ model InstagramPost {
   attempts         Int                @default(0)
   lastError        String?
   processedAt      DateTime?
+  /// Sincronizaciones completas seguidas en que la publicación no apareció (borrada o archivada).
+  missingCount     Int                @default(0)
+  /// Momento en que la sincronización retiró el vehículo por desaparecer de Instagram.
+  autoWithdrawnAt  DateTime?
 
   vehicle  Vehicle?
   syncLogs SyncLog[]

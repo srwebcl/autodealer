@@ -17,6 +17,8 @@ const runIds: string[] = [];
 async function cleanup() {
   if (!db) return;
   const posts = await db.instagramPost.findMany({ where: { instagramMediaId: { startsWith: P } }, select: { id: true } });
+  const vehicles = await db.vehicle.findMany({ where: { instagramPostId: { in: posts.map((p) => p.id) } }, select: { id: true } });
+  await db.auditLog.deleteMany({ where: { entityType: "Vehicle", entityId: { in: vehicles.map((v) => v.id) } } });
   await db.vehicle.deleteMany({ where: { instagramPostId: { in: posts.map((p) => p.id) } } });
   await db.syncLog.deleteMany({ where: { OR: [{ postId: { in: posts.map((p) => p.id) } }, { runId: { in: runIds } }] } });
   await db.instagramPost.deleteMany({ where: { instagramMediaId: { startsWith: P } } });
@@ -262,5 +264,107 @@ describe.skipIf(!db)("sincronización Instagram (fakes + base real)", () => {
     expect(run?.finishedAt).not.toBeNull();
     expect(run?.logs.some((l) => l.eventType === "vehicle.published")).toBe(true);
     expect(JSON.stringify(run?.logs)).not.toContain("firma=temporal");
+  });
+});
+
+// Fechas en 2030: la ventana `since` excluye las publicaciones reales, que nunca se tocan.
+describe.skipIf(!db)("retiro automático de publicaciones borradas en Instagram", () => {
+  const ts = (d: number) => `2030-01-${String(d).padStart(2, "0")}T12:00:00+0000`;
+  const wOpts = {
+    ...DEFAULT_SYNC_OPTIONS,
+    since: new Date("2030-01-01T00:00:00Z"),
+    autoPublishSince: new Date("2030-01-01T00:00:00Z"),
+    withdrawMissing: { afterMisses: 2, maxPerRun: 2 },
+  };
+  async function wsync(o: Partial<typeof wOpts> & { onlyMediaIds?: string[] } = {}) {
+    const r = await runSync(deps(), "SCRIPT", { ...wOpts, ...o });
+    if (r.status === "locked") throw new Error("locked");
+    runIds.push(r.runId);
+    return r;
+  }
+  const car = (id: string, d: number) => carousel(id, CAPTION, [`${id}1`], ts(d));
+
+  beforeEach(async () => {
+    await cleanup();
+    storage = new FakeStorage();
+    failDownloadFor = null;
+    apiError = null;
+    feed = [car(`${P}71`, 10), car(`${P}72`, 9), car(`${P}73`, 8)];
+    await wsync();
+  });
+
+  it("retira tras dos ausencias seguidas, con auditoría, y conserva fotos", async () => {
+    expect((await vehicleFor(`${P}72`))?.published).toBe(true);
+    feed = [car(`${P}71`, 10), car(`${P}73`, 8)];
+
+    const first = await wsync();
+    expect(first.stats).toMatchObject({ missing: 1, withdrawn: 0 });
+    expect((await vehicleFor(`${P}72`))?.status).toBe("AVAILABLE");
+
+    const second = await wsync();
+    expect(second).toMatchObject({ changed: true });
+    expect(second.stats).toMatchObject({ missing: 1, withdrawn: 1 });
+    const v = await vehicleFor(`${P}72`);
+    expect(v?.status).toBe("WITHDRAWN");
+    expect(v?.images).toHaveLength(1);
+    expect(storage.deletes).toBe(0);
+    const audit = await db!.auditLog.findFirst({ where: { entityId: v!.id, action: "vehicle.auto_withdrawn" } });
+    expect(audit?.details).toMatchObject({ previousStatus: "AVAILABLE", via: "sync" });
+    expect((await vehicleFor(`${P}71`))?.status).toBe("AVAILABLE");
+
+    // Ya retirado: no vuelve a contarse.
+    expect((await wsync()).stats).toMatchObject({ missing: 0, withdrawn: 0 });
+  });
+
+  it("una ausencia aislada no retira y el contador se reinicia al reaparecer", async () => {
+    feed = [car(`${P}71`, 10), car(`${P}73`, 8)];
+    await wsync();
+    feed = [car(`${P}71`, 10), car(`${P}72`, 9), car(`${P}73`, 8)];
+    await wsync();
+    expect((await db!.instagramPost.findUnique({ where: { instagramMediaId: `${P}72` } }))?.missingCount).toBe(0);
+    feed = [car(`${P}71`, 10), car(`${P}73`, 8)];
+    expect((await wsync()).stats.withdrawn).toBe(0);
+    expect((await vehicleFor(`${P}72`))?.status).toBe("AVAILABLE");
+  });
+
+  it("si la publicación vuelve (desarchivada), el vehículo se restaura", async () => {
+    feed = [car(`${P}71`, 10), car(`${P}73`, 8)];
+    await wsync();
+    await wsync();
+    expect((await vehicleFor(`${P}72`))?.status).toBe("WITHDRAWN");
+
+    feed = [car(`${P}71`, 10), car(`${P}72`, 9), car(`${P}73`, 8)];
+    const r = await wsync();
+    expect(r.stats.restored).toBe(1);
+    expect((await vehicleFor(`${P}72`))?.status).toBe("AVAILABLE");
+  });
+
+  it("no restaura si alguien cambió el estado después del retiro (p. ej. vendido)", async () => {
+    feed = [car(`${P}71`, 10), car(`${P}73`, 8)];
+    await wsync();
+    await wsync();
+    const v = await vehicleFor(`${P}72`);
+    await db!.vehicle.update({ where: { id: v!.id }, data: { status: "SOLD" } });
+    feed = [car(`${P}71`, 10), car(`${P}72`, 9), car(`${P}73`, 8)];
+    expect((await wsync()).stats.restored).toBe(0);
+    expect((await vehicleFor(`${P}72`))?.status).toBe("SOLD");
+  });
+
+  it("anomalía: si faltan demasiadas a la vez, no retira nada", async () => {
+    feed = [];
+    await wsync();
+    const r = await wsync();
+    expect(r.stats).toMatchObject({ missing: 3, withdrawn: 0 });
+    expect((await vehicleFor(`${P}71`))?.status).toBe("AVAILABLE");
+    expect((await db!.instagramPost.findUnique({ where: { instagramMediaId: `${P}71` } }))?.missingCount).toBe(0);
+  });
+
+  it("error de la API o prueba controlada: no cuenta ausencias", async () => {
+    apiError = new InstagramApiError("caída simulada", "network");
+    await wsync();
+    apiError = null;
+    feed = [car(`${P}71`, 10)];
+    await wsync({ onlyMediaIds: [`${P}71`] });
+    expect(await db!.instagramPost.count({ where: { instagramMediaId: { startsWith: P }, missingCount: { gt: 0 } } })).toBe(0);
   });
 });
