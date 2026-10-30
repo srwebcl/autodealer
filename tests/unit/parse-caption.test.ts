@@ -108,6 +108,21 @@ Valor $18.490.000 conversable
     expect(publishBlockers(r.vehicle, 2)[0]).toMatch(/año, precio/);
   });
 
+  it("caption ambiguo bloquea la publicación aunque haya datos", () => {
+    const r = parseCaption("Modelo: Toyota Yaris\nAño: 2020\nPrecio: conversable\nValor $9.990.000");
+    expect(publishBlockers(r.vehicle, 3, r).join()).toMatch(/Caption ambiguo: Precio no interpretable/);
+  });
+
+  it("marca no reconocida bloquea por interpretación", () => {
+    const r = parseCaption("Marca: Zxqauto\nModelo: Z1\nAño: 2022\nPrecio: $9.990.000");
+    expect(publishBlockers(r.vehicle, 3, r).join()).toMatch(/Marca no reconocida/);
+  });
+
+  it("caption bien interpretado no tiene bloqueos", () => {
+    const r = parseCaption("Modelo: Hyundai Tucson\nAño: 2018\nPrecio: $14.590.000");
+    expect(publishBlockers(r.vehicle, 3, r)).toEqual([]);
+  });
+
   it("varios precios → ninguno (ambiguo)", () => {
     const r = parseCaption("Hyundai Tucson 2019\nAntes $15.990.000 ahora $14.990.000");
     expect(r.vehicle.priceClp).toBeUndefined();

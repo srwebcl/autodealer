@@ -42,7 +42,7 @@ async function main() {
       if (m.media_type === "VIDEO") [estado, motivo] = ["omitida", "video"];
       else if (!looksLikeVehicle(r)) [estado, motivo] = ["omitida", "no parece vehículo"];
       else {
-        const b = publishBlockers(r.vehicle, images);
+        const b = publishBlockers(r.vehicle, images, r);
         if (!autoPublishSince || new Date(m.timestamp) < autoPublishSince) b.push("histórico: disponibilidad no confirmada");
         [estado, motivo] = b.length ? ["pendiente", b.join("; ")] : ["publicable", ""];
         photos += images;

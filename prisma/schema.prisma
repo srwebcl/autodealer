@@ -254,3 +254,23 @@ model SiteSettings {
   draftFields     String[] @default([])
   updatedAt       DateTime @updatedAt
 }
+
+/// Credenciales de integraciones, cifradas con AES-256-GCM (clave en TOKEN_ENCRYPTION_KEY).
+/// Nunca se guarda el token en claro ni se registra en logs.
+model IntegrationCredential {
+  /// Proveedor, p. ej. "instagram".
+  provider             String    @id
+  ciphertext           String
+  iv                   String
+  authTag              String
+  /// SHA-256 del token de .env usado para inicializar: detecta si se reemplazó manualmente.
+  sourceHash           String?
+  /// Cuándo se guardó por primera vez este token (bootstrap o renovación).
+  storedAt             DateTime  @default(now())
+  lastRefreshedAt      DateTime?
+  expiresAt            DateTime?
+  lastRefreshAttemptAt DateTime?
+  lastRefreshError     String?
+  refreshFailures      Int       @default(0)
+  updatedAt            DateTime  @updatedAt
+}

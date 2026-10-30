@@ -22,7 +22,9 @@
     "ig:verify": "tsx scripts/instagram-verify.ts",
     "ig:preview": "tsx scripts/instagram-preview.ts",
     "ig:sync": "tsx scripts/instagram-sync.ts",
-    "r2:verify": "tsx scripts/r2-verify.ts"
+    "r2:verify": "tsx scripts/r2-verify.ts",
+    "ig:token": "tsx scripts/instagram-token.ts",
+    "vehicle:confirm": "tsx scripts/vehicle-confirm.ts"
   },
   "dependencies": {
     "@prisma/adapter-neon": "7.10.1",

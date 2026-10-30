@@ -501,11 +501,28 @@ const FIELD_LABELS: Record<(typeof REQUIRED_FOR_PUBLISH)[number], string> = {
   priceClp: "precio",
 };
 
-/** Motivos por los que no se publica automáticamente (vacío = publicable). */
-export function publishBlockers(v: ParsedVehicle, imageCount: number): string[] {
+/** Confianza mínima de cada campo obligatorio para publicar sin revisión humana. */
+export const MIN_REQUIRED_CONFIDENCE = 0.7;
+
+/** Advertencias del extractor que afectan a campos obligatorios. */
+const BLOCKING_WARNING = /^(Marca no reconocida|Año no válido|Precio no interpretable|Varios precios)/;
+
+/**
+ * Motivos por los que no se publica automáticamente (vacío = publicable).
+ * Con `parse`, además exige que el caption se haya interpretado sin ambigüedad.
+ */
+export function publishBlockers(v: ParsedVehicle, imageCount: number, parse?: Pick<ParseResult, "provenance" | "warnings">): string[] {
   const missing = REQUIRED_FOR_PUBLISH.filter((f) => v[f] === undefined).map((f) => FIELD_LABELS[f]);
   const out = missing.length ? [`Faltan datos obligatorios: ${missing.join(", ")}`] : [];
   if (imageCount === 0) out.push("Sin imágenes almacenadas");
+  if (parse) {
+    const blocking = parse.warnings.filter((w) => BLOCKING_WARNING.test(w));
+    if (blocking.length) out.push(`Caption ambiguo: ${blocking.join("; ")}`);
+    const lowConfidence = REQUIRED_FOR_PUBLISH.filter(
+      (f) => v[f] !== undefined && (parse.provenance[f]?.confidence ?? 0) < MIN_REQUIRED_CONFIDENCE,
+    ).map((f) => FIELD_LABELS[f]);
+    if (lowConfidence.length) out.push(`Interpretación con baja confianza: ${lowConfidence.join(", ")}`);
+  }
   return out;
 }
 

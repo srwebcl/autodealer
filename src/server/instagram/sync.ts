@@ -357,7 +357,7 @@ async function processPost(a: ProcessArgs): Promise<ProcessOutcome> {
   }
 
   // 4) Reglas de publicación.
-  const blockers = publishBlockers(parsed.vehicle, stored.length);
+  const blockers = publishBlockers(parsed.vehicle, stored.length, parsed);
   const postDate = new Date(media.timestamp);
   if (!a.opts.autoPublishSince || postDate < a.opts.autoPublishSince) {
     blockers.push("Disponibilidad no confirmada (publicación anterior al inicio de la publicación automática): requiere validación");

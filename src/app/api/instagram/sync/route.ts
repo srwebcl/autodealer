@@ -22,9 +22,9 @@ async function handle(request: Request, trigger: "CRON" | "MANUAL") {
   await connection();
   if (!authorized(request)) return Response.json({ error: "No autorizado" }, { status: 401 });
 
-  let setup: ReturnType<typeof createSyncSetup>;
+  let setup: Awaited<ReturnType<typeof createSyncSetup>>;
   try {
-    setup = createSyncSetup(db);
+    setup = await createSyncSetup(db);
   } catch (error) {
     // Mensaje solo con nombres de variables.
     console.error("[instagram-sync] configuración:", error instanceof Error ? error.message : error);
@@ -39,7 +39,7 @@ async function handle(request: Request, trigger: "CRON" | "MANUAL") {
 
   console.info("[instagram-sync]", trigger, result.status, JSON.stringify(result.stats));
   return Response.json(
-    { status: result.status, runId: result.runId, stats: result.stats, error: result.error },
+    { status: result.status, runId: result.runId, stats: result.stats, error: result.error, tokenRefresh: setup.tokenRefresh.status },
     { status: result.status === "FAILED" ? 502 : 200, headers: { "Cache-Control": "no-store" } },
   );
 }

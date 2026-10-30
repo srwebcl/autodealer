@@ -97,8 +97,13 @@ npm run ig:verify    # solo lectura: host, tipo de token, vencimiento, permisos,
 npm run r2:verify    # alcance de la clave (solo el bucket), escritura/lectura/borrado de prueba, URL pública
 npm run ig:preview   # solo lectura: qué se publicaría y por qué (últimos 60 días por defecto)
 npm run ig:sync -- --only=<id>   # prueba controlada con UNA publicación real
-npm run ig:sync      # importación (escribe en Neon y R2)
+npm run vehicle:confirm -- --instagram-id=<id> [--dry-run]   # confirmar disponibilidad y publicar (registra AuditLog)
+npm run ig:sync -- --all         # importación completa (sin flag no hace nada)
+npm run ig:token [-- --refresh]  # estado del token (fechas) / renovación manual
 ```
+
+- **Token:** se guarda cifrado (AES-256-GCM, `TOKEN_ENCRYPTION_KEY`) en `IntegrationCredential`. Se renueva con el endpoint oficial de Instagram Login (`refresh_access_token`): primera vez 24 h después de guardarlo (edad desconocida del token del panel) y luego cada 50 días. El token renovado se valida con `GET /me` (mismo `user_id`) antes de reemplazar el vigente; si falla, se conserva el vigente, se registra `token.refresh_failed` (ERROR) en `SyncLog` y en los logs de Vercel. Con menos de 7 días para vencer se registra `token.expiring`. Si cambias `INSTAGRAM_ACCESS_TOKEN` a mano, se adopta solo si es válido.
+- **"Caption bien interpretado":** además de los datos obligatorios, se bloquea la publicación automática si hay advertencias sobre campos obligatorios (varios precios, precio/año no interpretables, marca no reconocida) o confianza < 0,7.
 
 - **Sincronización automática:** Vercel Cron cada hora (`vercel.json`) llama a `GET /api/instagram/sync` con `Authorization: Bearer $CRON_SECRET`. Manual: `POST` al mismo endpoint con la misma cabecera.
 - **Sin webhooks:** Meta no ofrece un webhook de publicaciones nuevas propias; se usa sondeo programado.

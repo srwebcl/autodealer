@@ -1,6 +1,8 @@
 /**
  * Ejecuta la sincronización real desde la terminal (escribe en Neon y R2).
- * Uso: npm run ig:sync
+ * Uso: npm run ig:sync -- --only=<id>[,<id>]   (prueba controlada)
+ *      npm run ig:sync -- --all                (importación completa desde INSTAGRAM_SYNC_SINCE)
+ * Sin uno de esos flags no hace nada: evita una importación completa accidental.
  */
 import { existsSync } from "node:fs";
 import { createPrismaClient } from "../src/lib/db/create-client";
@@ -11,7 +13,13 @@ if (existsSync(".env.local")) process.loadEnvFile(".env.local");
 const db = createPrismaClient(process.env.DATABASE_URL ?? "");
 
 async function main() {
-  const { deps, options } = createSyncSetup(db);
+  const onlyArg = process.argv.find((a) => a.startsWith("--only="));
+  if (!onlyArg && !process.argv.includes("--all")) {
+    console.log("Indica --only=<id> (prueba controlada) o --all (importación completa). No se ejecutó nada.");
+    return;
+  }
+  const { deps, options, tokenRefresh } = await createSyncSetup(db);
+  console.log(`Token: ${tokenRefresh.status === "not_due" ? `vigente (próxima renovación ${tokenRefresh.nextRefreshAt.toISOString().slice(0, 10)})` : tokenRefresh.status === "refreshed" ? `renovado, vence ${tokenRefresh.expiresAt.toISOString().slice(0, 10)}` : `renovación fallida (se usa el vigente): ${tokenRefresh.error}`}`);
   const only = process.argv.find((a) => a.startsWith("--only="))?.slice(7);
   if (only) {
     options.onlyMediaIds = only.split(",").filter((id) => /^\d+$/.test(id));
