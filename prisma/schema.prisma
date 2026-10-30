@@ -60,6 +60,19 @@ enum SyncStatus {
   SKIPPED // publicación que no es un vehículo (promoción, aviso, etc.)
 }
 
+enum SyncRunStatus {
+  RUNNING
+  SUCCESS
+  PARTIAL // terminó, pero con publicaciones en error
+  FAILED
+}
+
+enum SyncTrigger {
+  CRON
+  MANUAL
+  SCRIPT
+}
+
 enum LogLevel {
   INFO
   WARN
@@ -120,6 +133,9 @@ model VehicleImage {
   instagramMediaId String?
   /// Clave del objeto en R2. Nunca una URL firmada ni un secreto.
   storageKey       String  @unique
+  /// URL pública permanente al momento de importar (referencia). La UI la recalcula
+  /// desde storageKey + R2_PUBLIC_BASE_URL para sobrevivir a un cambio de dominio.
+  publicUrl        String?
   contentType      String?
   bytes            Int?
   width            Int?
@@ -161,6 +177,8 @@ model InstagramPost {
 
 model SyncLog {
   id        String         @id @default(uuid()) @db.Uuid
+  runId     String?        @db.Uuid
+  run       SyncRun?       @relation(fields: [runId], references: [id], onDelete: SetNull)
   postId    String?        @db.Uuid
   post      InstagramPost? @relation(fields: [postId], references: [id], onDelete: SetNull)
   /// Ej: sync.started, media.downloaded, caption.parsed, vehicle.published.
@@ -174,7 +192,31 @@ model SyncLog {
 
   @@index([createdAt(sort: Desc)])
   @@index([postId])
+  @@index([runId])
   @@index([level, createdAt(sort: Desc)])
+}
+
+/// Una ejecución de sincronización (cron, manual o script).
+model SyncRun {
+  id         String        @id @default(uuid()) @db.Uuid
+  trigger    SyncTrigger
+  status     SyncRunStatus @default(RUNNING)
+  startedAt  DateTime      @default(now())
+  finishedAt DateTime?
+  /// Contadores: vistos, nuevos, actualizados, sin cambios, omitidos, pendientes, errores, imágenes subidas.
+  stats      Json?
+  error      String?
+  logs       SyncLog[]
+
+  @@index([startedAt(sort: Desc)])
+}
+
+/// Candado de fila única (id = 1) para impedir sincronizaciones simultáneas.
+/// Se toma con un UPDATE condicional atómico; expira solo si una ejecución muere.
+model SyncLock {
+  id          Int       @id @default(1)
+  holder      String?
+  lockedUntil DateTime?
 }
 
 // ─── Administración ─────────────────────────────────────────────────────
