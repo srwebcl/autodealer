@@ -22,3 +22,23 @@ export interface VehicleCardData {
   /** true solo para datos ficticios de maqueta. */
   isDemo?: boolean;
 }
+
+export interface VehicleImageData {
+  src: string;
+  alt: string;
+  width?: number | null;
+  height?: number | null;
+}
+
+/** Ficha completa para /vehiculos/[slug]. Campos ausentes = null (nunca inventados). */
+export interface VehicleDetailData extends VehicleCardData {
+  engine: string | null;
+  drivetrain: string | null;
+  color: string | null;
+  description: string | null;
+  features: string[];
+  images: VehicleImageData[];
+  instagramPermalink: string | null;
+  publishedAt: Date | null;
+  updatedAt: Date;
+}

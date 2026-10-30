@@ -11,7 +11,7 @@ La especificación completa está en [`AUTODEALER_MASTER_PLAN.md`](AUTODEALER_MA
 | 0. Inspección y plan | ✅ |
 | 1. Diseño base (layout, portada, tarjetas, datos demo) | ✅ |
 | 2. Datos (Neon + Prisma) | ✅ |
-| 3. Catálogo real, filtros, fichas, SEO | Pendiente |
+| 3. Catálogo real, filtros, fichas, SEO | ✅ |
 | 4. Panel administrativo | Pendiente |
 | 5. Instagram + R2 | Pendiente |
 | 6. QA | Pendiente |
@@ -76,6 +76,18 @@ npm run db:studio       # explorador visual
 
 Usuarios/sesiones: los genera Better Auth en la Fase 4.
 
+## Catálogo
+
+- **Visibilidad:** el catálogo muestra solo `published = true` con estado `AVAILABLE` o `RESERVED`. Las fichas `SOLD` siguen accesibles por URL (aviso "vendido", `noindex`, sin oferta en JSON-LD); `WITHDRAWN` y no publicadas no existen públicamente.
+- **Demo:** los vehículos `isDemo` se ocultan automáticamente cuando `VERCEL_ENV=production`, y siempre llevan `noindex`.
+- **Filtros en la URL** (`/vehiculos?marca=Toyota&anioMin=2020&orden=precio-asc&pagina=2`): `q`, `marca`, `anioMin`, `anioMax`, `precioMin`, `precioMax`, `kmMax`, `combustible`, `transmision`, `traccion`, `orden`, `pagina`. Valores inválidos se ignoran. Las opciones solo muestran valores existentes en el inventario. Funciona sin JavaScript.
+- **Caché:** las consultas usan `"use cache"` con la etiqueta `vehicles` (`src/server/vehicles/queries.ts`, revalidación de seguridad cada hora). El panel y la sincronización deben invalidarla al cambiar datos.
+- **SEO:** metadata y canonical por ficha, Open Graph con la primera foto, JSON-LD `Car` solo con datos presentes (oferta solo si hay precio), `sitemap.xml` con fichas indexables, `robots.txt` (bloquea todo fuera de producción en Vercel). Combinaciones de filtros: `noindex, follow`.
+- **404 de fichas:** un slug inexistente muestra la página "no encontrada" con `noindex`. Por el streaming de Next 16 (Partial Prerendering) el código HTTP es 200 para slugs no prerenderizados; es el comportamiento documentado por Next y Google respeta el `noindex`.
+- **Imágenes:** `VehicleImage.storageKey` + `R2_PUBLIC_BASE_URL` → URL pública. Sin R2 configurado se muestra un placeholder. El dominio de R2 se habilita en `next.config.ts` desde esa variable.
+
+Código: filtros puros en `src/lib/vehicles/filters.ts`, consultas en `src/server/vehicles/repository.ts` (probadas contra la base) y envoltorios cacheados en `queries.ts`.
+
 ## Variables de entorno
 
 Copia `.env.example` a `.env.local`. **Nunca** subas `.env.local` a Git ni compartas secretos por chat.
@@ -87,7 +99,7 @@ Copia `.env.example` a `.env.local`. **Nunca** subas `.env.local` a Git ni compa
 | `DATABASE_URL_UNPOOLED` | 2 | Neon directa (migraciones) |
 | `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` | 4 | Sesiones del panel |
 | `INSTAGRAM_*` | 5 | API oficial de Instagram (solo servidor) |
-| `R2_*` | 5 | Almacenamiento de imágenes |
+| `R2_*` | 5 | Almacenamiento de imágenes (`R2_PUBLIC_BASE_URL` ya lo usa el catálogo) |
 | `CRON_SECRET` | 5 | Protege la ruta de sincronización programada |
 
 ## Estructura
@@ -107,7 +119,6 @@ src/
 │   └── vehicles/           # tarjeta, grilla, estados
 ├── config/site.ts          # datos comerciales (confirmados y provisionales)
 ├── lib/
-│   ├── demo/vehicles.ts    # ⚠️ datos ficticios de maqueta
 │   ├── utils/format.ts     # CLP y kilometraje
 │   └── whatsapp.ts         # enlaces wa.me
 └── types/
@@ -124,7 +135,7 @@ Busca `DraftBadge`, `draft` y `BORRADOR` en el código. Hoy incluye:
 - Banda "¿Quieres vender o cambiar tu auto?".
 - Nota del footer "Precios … sujetos a confirmación".
 - Ícono del sitio (`src/app/icon.svg`), placeholder basado en las franjas del logo.
-- Los 6 vehículos de `src/lib/demo/vehicles.ts` son **ficticios** y se muestran con la etiqueta "Demo".
+- Los vehículos del seed (`prisma/demo-data.ts`) son **ficticios** (`isDemo`), se muestran con la etiqueta "Demo" y se borran con `npm run db:demo:clear`.
 
 Confirmados (tomados del sitio anterior): dirección, teléfono/WhatsApp, email, Instagram, logo y colores.
 

@@ -11,8 +11,7 @@ export function VehicleCard({ vehicle, headingLevel = 3 }: { vehicle: VehicleCar
   const price = formatClp(vehicle.priceClp);
   const km = formatKm(vehicle.mileageKm);
   const Heading = headingLevel === 2 ? "h2" : "h3";
-  // Las fichas demo no tienen página propia.
-  const href = vehicle.isDemo ? null : `/vehiculos/${vehicle.slug}`;
+  const href = `/vehiculos/${vehicle.slug}`;
 
   type Spec = { icon: ReactNode; label: string; value: string };
   const candidates: (Spec | null)[] = [
@@ -51,13 +50,9 @@ export function VehicleCard({ vehicle, headingLevel = 3 }: { vehicle: VehicleCar
       <div className="flex flex-1 flex-col p-5">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-mist">{vehicle.make}</p>
         <Heading className="mt-1 font-display text-2xl leading-tight font-bold uppercase italic tracking-tight">
-          {href ? (
-            <Link href={href} className="after:absolute after:inset-0 focus-visible:outline-none">
-              {vehicle.model}
-            </Link>
-          ) : (
-            vehicle.model
-          )}
+          <Link href={href} className="after:absolute after:inset-0 focus-visible:outline-none">
+            {vehicle.model}
+          </Link>
           {vehicle.version ? (
             <span className="ml-2 align-middle font-sans text-sm font-medium normal-case not-italic tracking-normal text-mist">
               {vehicle.version}
@@ -87,19 +82,17 @@ export function VehicleCard({ vehicle, headingLevel = 3 }: { vehicle: VehicleCar
                 {price ?? <span className="text-chalk/80">Consultar</span>}
               </p>
             </div>
-            {href ? (
-              <span
-                aria-hidden
-                className="grid size-10 place-items-center rounded-sm bg-white/5 text-chalk transition-colors group-hover:bg-brand-red"
-              >
-                <ArrowRightIcon />
-              </span>
-            ) : null}
+            <span
+              aria-hidden
+              className="grid size-10 place-items-center rounded-sm bg-white/5 text-chalk transition-colors group-hover:bg-brand-red"
+            >
+              <ArrowRightIcon />
+            </span>
           </div>
         </div>
       </div>
       {/* Foco visible para toda la tarjeta cuando el enlace estirado recibe foco. */}
-      {href ? <span aria-hidden className="pointer-events-none absolute inset-0 rounded-md ring-brand-yellow group-has-[a:focus-visible]:ring-2" /> : null}
+      <span aria-hidden className="pointer-events-none absolute inset-0 rounded-md ring-brand-yellow group-has-[a:focus-visible]:ring-2" />
     </article>
   );
 }
