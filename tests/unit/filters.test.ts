@@ -63,18 +63,12 @@ describe("filtersToSearch", () => {
 
 describe("buildVehicleWhere", () => {
   it("siempre restringe a publicados y estados visibles", () => {
-    const where = buildVehicleWhere(parseCatalogFilters({}), true);
+    const where = buildVehicleWhere(parseCatalogFilters({}));
     expect(where.AND).toEqual([{ published: true, status: { in: ["AVAILABLE", "RESERVED"] } }]);
-  });
-  it("excluye demo cuando se indica", () => {
-    const where = buildVehicleWhere(parseCatalogFilters({}), false);
-    expect((where.AND as object[])[0]).toMatchObject({ isDemo: false });
   });
   it("combina filtros", () => {
     const where = buildVehicleWhere(
-      parseCatalogFilters({ q: "cx 5", anioMin: "2019", precioMax: "20000000", transmision: "automatica" }),
-      true,
-    );
+      parseCatalogFilters({ q: "cx 5", anioMin: "2019", precioMax: "20000000", transmision: "automatica" }));
     const and = where.AND as object[];
     expect(and).toHaveLength(1 + 2 + 1 + 1 + 1); // base + 2 palabras + año + precio + transmisión
     expect(and).toContainEqual({ year: { gte: 2019, lte: undefined } });

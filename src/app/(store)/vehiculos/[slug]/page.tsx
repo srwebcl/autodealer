@@ -37,8 +37,8 @@ export async function generateMetadata({ params }: PageProps<"/vehiculos/[slug]"
     title,
     description,
     alternates: { canonical: path },
-    // Vendidos y datos demo no se indexan.
-    robots: v.status === "SOLD" || v.isDemo ? { index: false, follow: true } : undefined,
+    // Vendidos no se indexan.
+    robots: !siteConfig.indexable ? { index: false, follow: false } : v.status === "SOLD" ? { index: false, follow: true } : undefined,
     openGraph: {
       type: "website",
       url: path,
@@ -101,15 +101,6 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[slu
           </ol>
         </nav>
 
-        {v.isDemo ? (
-          <p
-            role="note"
-            className="mb-6 rounded-sm border border-dashed border-brand-yellow/50 bg-brand-yellow/5 px-4 py-3 text-sm"
-          >
-            <strong className="text-brand-yellow">Demo:</strong> ficha ficticia para revisar el diseño. No es un
-            vehículo real.
-          </p>
-        ) : null}
         {sold ? (
           <p role="status" className="mb-6 rounded-sm bg-white px-4 py-3 text-sm font-semibold text-ink">
             Este vehículo ya fue vendido. Revisa otros disponibles más abajo o escríbenos.

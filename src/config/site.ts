@@ -12,6 +12,8 @@ export const siteConfig = {
   region: "Coquimbo",
   country: "Chile",
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+  /** Solo "true" en el dominio final: antes del lanzamiento nada se indexa (evita duplicar vercel.app). */
+  indexable: process.env.NEXT_PUBLIC_SITE_INDEXABLE === "true",
   description:
     "Automotora en La Serena. Revisa nuestros vehículos disponibles y cotiza directo por WhatsApp.",
 

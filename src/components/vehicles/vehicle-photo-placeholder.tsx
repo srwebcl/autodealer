@@ -1,4 +1,4 @@
-/** Ilustración neutra para vehículos sin foto (o datos demo). No simula una foto real. */
+/** Ilustración neutra para vehículos sin foto. No simula una foto real. */
 export function VehiclePhotoPlaceholder({ label = "Foto no disponible" }: { label?: string }) {
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[radial-gradient(ellipse_at_50%_35%,var(--color-graphite-700),var(--color-graphite-900)_70%)]">

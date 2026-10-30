@@ -1,7 +1,7 @@
-import { timingSafeEqual } from "node:crypto";
 import { revalidateTag } from "next/cache";
 import { connection } from "next/server";
 import { db } from "@/lib/db";
+import { isAuthorizedCron } from "@/lib/security/cron-auth";
 import { createSyncSetup } from "@/server/instagram/setup";
 import { runSync } from "@/server/instagram/sync";
 import { VEHICLES_TAG } from "@/server/vehicles/queries";
@@ -9,18 +9,9 @@ import { VEHICLES_TAG } from "@/server/vehicles/queries";
 // La sincronización descarga imágenes: margen amplio (Vercel Pro).
 export const maxDuration = 300;
 
-function authorized(request: Request): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret || secret.length < 16) return false;
-  const header = request.headers.get("authorization") ?? "";
-  const expected = Buffer.from(`Bearer ${secret}`);
-  const received = Buffer.from(header);
-  return received.length === expected.length && timingSafeEqual(received, expected);
-}
-
 async function handle(request: Request, trigger: "CRON" | "MANUAL") {
   await connection();
-  if (!authorized(request)) return Response.json({ error: "No autorizado" }, { status: 401 });
+  if (!isAuthorizedCron(request)) return Response.json({ error: "No autorizado" }, { status: 401 });
 
   let setup: Awaited<ReturnType<typeof createSyncSetup>>;
   try {

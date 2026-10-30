@@ -51,8 +51,7 @@ npm run db:migrate      # crear/aplicar migraciones en desarrollo (prisma migrat
 npm run db:deploy       # aplicar migraciones pendientes (CI / Vercel)
 npm run db:status       # estado de migraciones
 npm run db:generate     # regenerar el cliente (también corre en postinstall)
-npm run db:seed         # datos demo + configuración comercial (idempotente; bloqueado en producción)
-npm run db:demo:clear   # borra solo los vehículos con isDemo = true
+npm run db:seed         # configuración comercial (idempotente)
 npm run db:studio       # explorador visual
 ```
 
@@ -79,12 +78,11 @@ Usuarios/sesiones: los genera Better Auth en la Fase 4.
 ## Catálogo
 
 - **Visibilidad:** el catálogo muestra solo `published = true` con estado `AVAILABLE` o `RESERVED`. Las fichas `SOLD` siguen accesibles por URL (aviso "vendido", `noindex`, sin oferta en JSON-LD); `WITHDRAWN` y no publicadas no existen públicamente.
-- **Demo:** los vehículos `isDemo` se ocultan automáticamente cuando `VERCEL_ENV=production`, y siempre llevan `noindex`.
 - **Filtros en la URL** (`/vehiculos?marca=Toyota&anioMin=2020&orden=precio-asc&pagina=2`): `q`, `marca`, `anioMin`, `anioMax`, `precioMin`, `precioMax`, `kmMax`, `combustible`, `transmision`, `traccion`, `orden`, `pagina`. Valores inválidos se ignoran. Las opciones solo muestran valores existentes en el inventario. Funciona sin JavaScript.
 - **Caché:** las consultas usan `"use cache"` con la etiqueta `vehicles` (`src/server/vehicles/queries.ts`, revalidación de seguridad cada hora). El panel y la sincronización deben invalidarla al cambiar datos.
-- **SEO:** metadata y canonical por ficha, Open Graph con la primera foto, JSON-LD `Car` solo con datos presentes (oferta solo si hay precio), `sitemap.xml` con fichas indexables, `robots.txt` (bloquea todo fuera de producción en Vercel). Combinaciones de filtros: `noindex, follow`.
+- **SEO:** metadata y canonical por ficha, Open Graph con la primera foto, JSON-LD `Car` solo con datos presentes (oferta solo si hay precio), `sitemap.xml` con fichas indexables. Hasta el lanzamiento (`NEXT_PUBLIC_SITE_INDEXABLE` distinto de `true`) todo lleva `noindex` y `robots.txt` bloquea.
 - **404 de fichas:** un slug inexistente muestra la página "no encontrada" con `noindex`. Por el streaming de Next 16 (Partial Prerendering) el código HTTP es 200 para slugs no prerenderizados; es el comportamiento documentado por Next y Google respeta el `noindex`.
-- **Imágenes:** `VehicleImage.storageKey` + `R2_PUBLIC_BASE_URL` → URL pública. Sin R2 configurado se muestra un placeholder. El dominio de R2 se habilita en `next.config.ts` desde esa variable.
+- **Imágenes:** `VehicleImage.storageKey` → `/media/<clave>` (ruta propia que lee R2). Sin fotos se muestra un placeholder.
 
 Código: filtros puros en `src/lib/vehicles/filters.ts`, consultas en `src/server/vehicles/repository.ts` (probadas contra la base) y envoltorios cacheados en `queries.ts`.
 
@@ -105,7 +103,7 @@ npm run ig:token [-- --refresh]  # estado del token (fechas) / renovación manua
 - **Token:** se guarda cifrado (AES-256-GCM, `TOKEN_ENCRYPTION_KEY`) en `IntegrationCredential`. Se renueva con el endpoint oficial de Instagram Login (`refresh_access_token`): primera vez 24 h después de guardarlo (edad desconocida del token del panel) y luego cada 50 días. El token renovado se valida con `GET /me` (mismo `user_id`) antes de reemplazar el vigente; si falla, se conserva el vigente, se registra `token.refresh_failed` (ERROR) en `SyncLog` y en los logs de Vercel. Con menos de 7 días para vencer se registra `token.expiring`. Si cambias `INSTAGRAM_ACCESS_TOKEN` a mano, se adopta solo si es válido.
 - **"Caption bien interpretado":** además de los datos obligatorios, se bloquea la publicación automática si hay advertencias sobre campos obligatorios (varios precios, precio/año no interpretables, marca no reconocida) o confianza < 0,7.
 
-- **Sincronización automática:** Vercel Cron cada hora (`vercel.json`) llama a `GET /api/instagram/sync` con `Authorization: Bearer $CRON_SECRET`. Manual: `POST` al mismo endpoint con la misma cabecera.
+- **Sincronización:** `GET|POST /api/instagram/sync` con `Authorization: Bearer $CRON_SECRET`. El cron horario está desactivado hasta autorización.
 - **Sin webhooks:** Meta no ofrece un webhook de publicaciones nuevas propias; se usa sondeo programado.
 - **Fecha de corte:** `INSTAGRAM_SYNC_SINCE` (obligatoria) limita qué publicaciones se leen.
 - **Publicación automática:** solo para publicaciones desde `INSTAGRAM_AUTO_PUBLISH_SINCE`. Si está vacía, **nada se publica solo**; lo histórico queda como borrador "disponibilidad no confirmada".
@@ -113,7 +111,9 @@ npm run ig:token [-- --refresh]  # estado del token (fechas) / renovación manua
 - **Idempotencia:** `instagramMediaId` único, hash de caption + medios, claves de R2 estables, candado `SyncLock`, registro en `SyncRun`/`SyncLog`.
 - **Ediciones:** un caption editado actualiza el mismo vehículo; los campos en `lockedFields` (editados en el panel) no se sobrescriben; la sync **nunca** cambia el estado comercial.
 - **Costos:** tope interno de 8 GB en R2 (plan gratuito: 10 GB), máx. 15 publicaciones por ejecución, imágenes ≤ 10 MB.
-- **Imágenes en producción:** `r2.dev` se rechaza con `VERCEL_ENV=production`. Se guarda `storageKey` (fuente de verdad) y `publicUrl` (referencia); cambiar `R2_PUBLIC_BASE_URL` a un dominio propio no requiere migración.
+- **Imágenes:** se sirven desde el propio sitio en `/media/instagram/<post>/<foto>.jpg`. La ruta lee el bucket R2 de forma privada (API S3) y responde con caché de un año (`immutable`), así la CDN de Vercel las entrega y R2 solo se lee en el primer acceso. No depende de `r2.dev` ni de DNS y funciona igual en vercel.app y en el dominio final. En Neon se guarda `storageKey` (fuente de verdad) y `publicUrl` (`/media/<clave>`).
+- **Renovación del token:** `GET /api/instagram/token` (Vercel Cron diario 11:20 UTC, protegido con `CRON_SECRET`). Solo llama a Meta cuando corresponde. `/api/health` informa `instagramToken: ok | expiring | failing | missing` sin secretos.
+- **Cron de sincronización:** desactivado (no está en `vercel.json`). Se activa solo con autorización.
 
 ## Variables de entorno
 
@@ -129,7 +129,9 @@ Copia `.env.example` a `.env.local`. **Nunca** subas `.env.local` a Git ni compa
 | `INSTAGRAM_GRAPH_HOST`, `INSTAGRAM_GRAPH_VERSION` | 5 | Host y versión de la API Graph |
 | `INSTAGRAM_SYNC_SINCE` | 5 | Fecha de corte de lectura (obligatoria) |
 | `INSTAGRAM_AUTO_PUBLISH_SINCE` | 5 | Desde cuándo se publica automáticamente (vacía = nunca) |
-| `R2_*` | 5 | Almacenamiento de imágenes (`R2_PUBLIC_BASE_URL` ya lo usa el catálogo) |
+| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME` | 5 | Almacenamiento de imágenes (clave limitada al bucket) |
+| `NEXT_PUBLIC_SITE_INDEXABLE` | 7 | `true` solo en el dominio final |
+| `TOKEN_ENCRYPTION_KEY` | 5 | Cifrado del token en Neon (idéntica en todos los entornos) |
 | `CRON_SECRET` | 5 | Protege la ruta de sincronización programada |
 
 ## Estructura
@@ -164,7 +166,6 @@ Busca `DraftBadge`, `draft` y `BORRADOR` en el código. Hoy incluye:
 - Banda "¿Quieres vender o cambiar tu auto?".
 - Nota del footer "Precios … sujetos a confirmación".
 - Ícono del sitio (`src/app/icon.svg`), placeholder basado en las franjas del logo.
-- Los vehículos del seed (`prisma/demo-data.ts`) son **ficticios** (`isDemo`), se muestran con la etiqueta "Demo" y se borran con `npm run db:demo:clear`.
 
 Confirmados: dirección, teléfono/WhatsApp, email, Instagram, logo y colores (sitio anterior) y horario oficial Lun–Vie 08:30–18:30 · Sáb 10:00–14:00 (publicaciones de Instagram, confirmado por el cliente).
 

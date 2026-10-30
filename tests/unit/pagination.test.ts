@@ -16,12 +16,11 @@ describe("pageWindow", () => {
 });
 
 describe("publicImageUrl", () => {
-  it("null sin R2 configurado", () => {
-    expect(publicImageUrl("a/b.jpg", undefined)).toBeNull();
+  it("ruta propia del sitio, codificando segmentos", () => {
+    expect(publicImageUrl("instagram/123/456.jpg")).toBe("/media/instagram/123/456.jpg");
+    expect(publicImageUrl("vehiculos/abc/foto 1.jpg")).toBe("/media/vehiculos/abc/foto%201.jpg");
   });
-  it("une base y clave codificando segmentos", () => {
-    expect(publicImageUrl("vehiculos/abc/foto 1.jpg", "https://img.autodealer.cl/")).toBe(
-      "https://img.autodealer.cl/vehiculos/abc/foto%201.jpg",
-    );
+  it("null sin clave", () => {
+    expect(publicImageUrl("")).toBeNull();
   });
 });

@@ -16,7 +16,6 @@
     "db:deploy": "prisma migrate deploy",
     "db:status": "prisma migrate status",
     "db:seed": "prisma db seed",
-    "db:demo:clear": "tsx prisma/demo-clear.ts",
     "db:studio": "prisma studio",
     "test:integration": "vitest run --config vitest.integration.config.mts",
     "ig:verify": "tsx scripts/instagram-verify.ts",

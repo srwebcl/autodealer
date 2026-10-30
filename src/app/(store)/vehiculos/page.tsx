@@ -7,11 +7,11 @@ import { AutoSubmitSelect } from "@/components/vehicles/auto-submit-select";
 import { CatalogEmpty } from "@/components/vehicles/catalog-empty";
 import { CatalogFiltersForm, FILTERS_FORM_ID } from "@/components/vehicles/catalog-filters";
 import { CatalogSkeleton } from "@/components/vehicles/catalog-skeleton";
-import { DemoNotice } from "@/components/vehicles/demo-notice";
 import { FiltersDisclosure } from "@/components/vehicles/filters-disclosure";
 import { selectClass } from "@/components/vehicles/form-styles";
 import { Pagination } from "@/components/vehicles/pagination";
 import { VehicleGrid } from "@/components/vehicles/vehicle-grid";
+import { siteConfig } from "@/config/site";
 import { countActiveFilters, filtersToSearch, parseCatalogFilters, SORT_OPTIONS } from "@/lib/vehicles/filters";
 import { getCatalogFacets, getCatalogPage } from "@/server/vehicles/queries";
 
@@ -23,7 +23,7 @@ export async function generateMetadata({ searchParams }: PageProps<"/vehiculos">
     description: "Catálogo de autos disponibles en AutoDealer, La Serena. Filtra por marca, año, precio y más.",
     // Las combinaciones de filtros no se indexan; la paginación sí, con URL propia.
     alternates: { canonical: filters.pagina > 1 && !filtered ? `/vehiculos?pagina=${filters.pagina}` : "/vehiculos" },
-    robots: filtered ? { index: false, follow: true } : undefined,
+    robots: !siteConfig.indexable ? { index: false, follow: false } : filtered ? { index: false, follow: true } : undefined,
   };
 }
 
@@ -31,7 +31,6 @@ async function Catalog({ searchParams }: Pick<PageProps<"/vehiculos">, "searchPa
   const filters = parseCatalogFilters(await searchParams);
   const [result, facets] = await Promise.all([getCatalogPage(filters), getCatalogFacets()]);
   const activeCount = countActiveFilters(filters);
-  const hasDemo = result.vehicles.some((v) => v.isDemo);
 
   return (
     <div className="grid gap-6 lg:grid-cols-[17rem_1fr] lg:gap-10">
@@ -45,11 +44,6 @@ async function Catalog({ searchParams }: Pick<PageProps<"/vehiculos">, "searchPa
       </aside>
 
       <div className="min-w-0">
-        {hasDemo ? (
-          <div className="mb-6">
-            <DemoNotice />
-          </div>
-        ) : null}
 
         <div className="flex flex-col gap-4 border-b border-white/8 pb-5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-mist" aria-live="polite">

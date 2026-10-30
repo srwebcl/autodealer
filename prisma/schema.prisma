@@ -107,7 +107,7 @@ model Vehicle {
   published   Boolean       @default(false)
   publishedAt DateTime?
   source      VehicleSource @default(MANUAL)
-  /// true solo para datos ficticios del seed de desarrollo.
+  /// Obsoleto: se usó para datos de maqueta (ya eliminados). Sin uso en el código.
   isDemo      Boolean       @default(false)
 
   /// Campos editados en el panel: la sincronización con Instagram no los sobrescribe.

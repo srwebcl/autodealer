@@ -1,95 +1,130 @@
 import { existsSync } from "node:fs";
 import { afterAll, describe, expect, it } from "vitest";
+import type { Prisma } from "@/generated/prisma/client";
 import { createPrismaClient } from "@/lib/db/create-client";
 import { parseCatalogFilters } from "@/lib/vehicles/filters";
 import { findVehicleBySlug, getFacets, listIndexableSlugs, listRelated, listVehicles } from "@/server/vehicles/repository";
 
-// Solo lectura sobre los datos del seed demo (npm run db:seed).
+// Datos de prueba propios dentro de una transacción que SIEMPRE se revierte:
+// no dependen del inventario real ni lo modifican.
 if (existsSync(".env.local")) process.loadEnvFile(".env.local");
 const url = process.env.DATABASE_URL;
 const db = url ? createPrismaClient(url) : null;
 afterAll(() => db?.$disconnect());
 
-const list = (q: Record<string, string> = {}) => listVehicles(db!, parseCatalogFilters(q), true);
+type Tx = Prisma.TransactionClient;
+class Rollback extends Error {}
 
-describe.skipIf(!db)("catálogo público (datos demo)", () => {
-  // Las aserciones se limitan a los datos demo: la base puede tener además vehículos reales.
-  it("excluye vendidos y no publicados", async () => {
-    const { vehicles } = await list();
-    const slugs = vehicles.map((v) => v.slug);
-    expect(slugs.filter((s) => s.startsWith("demo-"))).toHaveLength(5);
-    expect(slugs).not.toContain("demo-kia-sportage-2018"); // SOLD
-    expect(slugs).not.toContain("demo-suzuki-swift-2023"); // sin precio → no publicado
-    expect(vehicles.every((v) => v.status === "AVAILABLE" || v.status === "RESERVED")).toBe(true);
-  });
+const MAKE = "Zzprueba"; // marca ficticia: aísla los resultados de los vehículos reales
+const at = (d: string) => new Date(`${d}T12:00:00Z`);
 
-  it("sin demo no muestra ningún vehículo demo (producción)", async () => {
-    const { vehicles, total } = await listVehicles(db!, parseCatalogFilters({}), false);
-    expect(vehicles.some((v) => v.isDemo)).toBe(false);
-    const realVisible = await db!.vehicle.count({ where: { isDemo: false, published: true, status: { in: ["AVAILABLE", "RESERVED"] } } });
-    expect(total).toBe(realVisible);
+const FIXTURES: Prisma.VehicleCreateManyInput[] = [
+  { slug: "zz-a-2021", make: MAKE, model: "Alfa", year: 2021, mileageKm: 48500, priceClp: 18990000, fuelType: "GASOLINE", transmission: "AUTOMATIC", published: true, publishedAt: at("2026-10-05") },
+  { slug: "zz-b-2020", make: MAKE, model: "Beta", version: "4x4", year: 2020, mileageKm: 87200, priceClp: 24490000, fuelType: "DIESEL", transmission: "MANUAL", drivetrain: "FOUR_WD", published: true, publishedAt: at("2026-10-04") },
+  { slug: "zz-c-2019", make: MAKE, model: "Gamma", year: 2019, mileageKm: 61000, priceClp: 21900000, fuelType: "GASOLINE", transmission: "AUTOMATIC", status: "RESERVED", published: true, publishedAt: at("2026-10-03") },
+  { slug: "zz-d-2021", make: MAKE, model: "Delta", year: 2021, mileageKm: null, priceClp: 26500000, fuelType: "DIESEL", transmission: "AUTOMATIC", published: true, publishedAt: at("2026-10-02"), features: ["Cámara"] },
+  { slug: "zz-sold-2018", make: MAKE, model: "Vendido", year: 2018, priceClp: 13490000, status: "SOLD", published: true, publishedAt: at("2026-10-01") },
+  { slug: "zz-draft-2023", make: MAKE, model: "Borrador", year: 2023, priceClp: null, published: false },
+  { slug: "zz-withdrawn-2022", make: MAKE, model: "Retirado", year: 2022, priceClp: 9990000, status: "WITHDRAWN", published: true, publishedAt: at("2026-09-30") },
+];
+
+async function withFixtures(fn: (tx: Tx) => Promise<void>) {
+  await db!
+    .$transaction(async (tx) => {
+      await tx.vehicle.createMany({ data: FIXTURES });
+      await fn(tx);
+      throw new Rollback();
+    }, { timeout: 30_000 })
+    .catch((e) => {
+      if (!(e instanceof Rollback)) throw e;
+    });
+}
+
+const mine = (q: Record<string, string> = {}) => parseCatalogFilters({ marca: MAKE, ...q });
+
+describe.skipIf(!db)("catálogo público (datos de prueba revertidos)", () => {
+  it("excluye vendidos, retirados y no publicados", async () => {
+    await withFixtures(async (tx) => {
+      const { vehicles, total } = await listVehicles(tx, mine());
+      expect(total).toBe(4);
+      expect(vehicles.map((v) => v.slug)).toEqual(["zz-a-2021", "zz-b-2020", "zz-c-2019", "zz-d-2021"]);
+      expect(vehicles.every((v) => v.status === "AVAILABLE" || v.status === "RESERVED")).toBe(true);
+    });
   });
 
   it("filtros combinados", async () => {
-    const { vehicles } = await list({ combustible: "diesel", transmision: "automatica" });
-    expect(vehicles.map((v) => v.slug)).toEqual(["demo-chevrolet-colorado-2021"]);
+    await withFixtures(async (tx) => {
+      const { vehicles } = await listVehicles(tx, mine({ combustible: "diesel", transmision: "automatica" }));
+      expect(vehicles.map((v) => v.slug)).toEqual(["zz-d-2021"]);
+    });
   });
 
-  it("búsqueda por texto en marca/modelo/versión", async () => {
-    expect((await list({ q: "cx-5" })).vehicles.map((v) => v.make)).toEqual(["Mazda"]);
-    expect((await list({ q: "toyota 4x4" })).vehicles.map((v) => v.model)).toEqual(["Hilux"]);
+  it("búsqueda por texto en modelo/versión", async () => {
+    await withFixtures(async (tx) => {
+      expect((await listVehicles(tx, mine({ q: "gamma" }))).vehicles.map((v) => v.slug)).toEqual(["zz-c-2019"]);
+      expect((await listVehicles(tx, mine({ q: "beta 4x4" }))).vehicles.map((v) => v.slug)).toEqual(["zz-b-2020"]);
+    });
   });
 
   it("rango de precio y año", async () => {
-    const { vehicles } = await list({ precioMax: "22000000", anioMin: "2019" });
-    expect(vehicles.map((v) => v.slug).sort()).toEqual(["demo-mazda-cx-5-2021", "demo-volkswagen-golf-2019"]);
+    await withFixtures(async (tx) => {
+      const { vehicles } = await listVehicles(tx, mine({ precioMax: "22000000", anioMin: "2019" }));
+      expect(vehicles.map((v) => v.slug).sort()).toEqual(["zz-a-2021", "zz-c-2019"]);
+    });
   });
 
-  it("ordena por precio ascendente", async () => {
-    const prices = (await list({ orden: "precio-asc" })).vehicles.map((v) => v.priceClp!);
-    expect(prices).toEqual([...prices].sort((a, b) => a - b));
-  });
-
-  it("km ascendente deja los sin kilometraje al final", async () => {
-    const { vehicles } = await list({ orden: "km-asc" });
-    expect(vehicles.at(-1)?.mileageKm).toBeNull();
+  it("orden por precio y kilometraje (sin dato al final)", async () => {
+    await withFixtures(async (tx) => {
+      const prices = (await listVehicles(tx, mine({ orden: "precio-asc" }))).vehicles.map((v) => v.priceClp!);
+      expect(prices).toEqual([...prices].sort((a, b) => a - b));
+      expect((await listVehicles(tx, mine({ orden: "km-asc" }))).vehicles.at(-1)?.slug).toBe("zz-d-2021");
+    });
   });
 
   it("página fuera de rango se ajusta a la última", async () => {
-    const r = await list({ pagina: "99" });
-    expect(r.page).toBe(r.pageCount);
-    expect(r.vehicles.length).toBeGreaterThan(0);
+    await withFixtures(async (tx) => {
+      const r = await listVehicles(tx, mine({ pagina: "99" }));
+      expect(r.page).toBe(r.pageCount);
+      expect(r.vehicles.length).toBeGreaterThan(0);
+    });
   });
 
-  it("facetas solo con valores existentes", async () => {
-    const f = await getFacets(db!, true);
-    const visible = await db!.vehicle.findMany({ where: { published: true, status: { in: ["AVAILABLE", "RESERVED"] } } });
-    const makes = f.makes.map((m) => m.value);
-    expect(makes.sort()).toEqual([...new Set(visible.map((v) => v.make))].sort());
-    expect(makes).not.toContain("Kia"); // solo existe vendido
-    expect(makes).not.toContain("Suzuki"); // solo existe no publicado
-    expect(f.yearMin).toBe(Math.min(...visible.map((v) => v.year!).filter(Boolean)));
+  it("facetas solo con valores de vehículos visibles", async () => {
+    await withFixtures(async (tx) => {
+      const f = await getFacets(tx);
+      const visible = await tx.vehicle.findMany({ where: { published: true, status: { in: ["AVAILABLE", "RESERVED"] } } });
+      expect(f.makes.map((m) => m.value).sort()).toEqual([...new Set(visible.map((v) => v.make))].sort());
+      expect(f.makes.find((m) => m.value === MAKE)?.count).toBe(4);
+    });
   });
 
-  it("ficha: vendido visible, no publicado y retirado ocultos", async () => {
-    expect((await findVehicleBySlug(db!, "demo-kia-sportage-2018", true))?.status).toBe("SOLD");
-    expect(await findVehicleBySlug(db!, "demo-suzuki-swift-2023", true)).toBeNull();
-    expect(await findVehicleBySlug(db!, "no-existe", true)).toBeNull();
-    const v = await findVehicleBySlug(db!, "demo-mazda-cx-5-2021", true);
-    expect(v?.features).toContain("Apple CarPlay");
-    expect(v?.drivetrain).toBe("AWD");
+  it("ficha: vendido visible; borrador, retirado e inexistente ocultos", async () => {
+    await withFixtures(async (tx) => {
+      expect((await findVehicleBySlug(tx, "zz-sold-2018"))?.status).toBe("SOLD");
+      expect(await findVehicleBySlug(tx, "zz-draft-2023")).toBeNull();
+      expect(await findVehicleBySlug(tx, "zz-withdrawn-2022")).toBeNull();
+      expect(await findVehicleBySlug(tx, "no-existe")).toBeNull();
+      expect((await findVehicleBySlug(tx, "zz-d-2021"))?.features).toEqual(["Cámara"]);
+    });
   });
 
   it("relacionados excluyen el propio y los no visibles", async () => {
-    const v = (await findVehicleBySlug(db!, "demo-toyota-hilux-2020", true))!;
-    const related = await listRelated(db!, v, 3, true);
-    expect(related.map((r) => r.id)).not.toContain(v.id);
-    expect(related.every((r) => r.status !== "SOLD")).toBe(true);
+    await withFixtures(async (tx) => {
+      const v = (await findVehicleBySlug(tx, "zz-b-2020"))!;
+      const related = await listRelated(tx, v, 3);
+      expect(related.map((r) => r.id)).not.toContain(v.id);
+      expect(related.every((r) => r.status === "AVAILABLE" || r.status === "RESERVED")).toBe(true);
+    });
   });
 
-  it("slugs indexables no incluyen vendidos", async () => {
-    const slugs = (await listIndexableSlugs(db!, true)).map((s) => s.slug);
-    expect(slugs.filter((s) => s.startsWith("demo-"))).toHaveLength(5);
-    expect(slugs).not.toContain("demo-kia-sportage-2018");
+  it("slugs indexables no incluyen vendidos, retirados ni borradores", async () => {
+    await withFixtures(async (tx) => {
+      const slugs = (await listIndexableSlugs(tx)).map((s) => s.slug).filter((s) => s.startsWith("zz-"));
+      expect(slugs.sort()).toEqual(["zz-a-2021", "zz-b-2020", "zz-c-2019", "zz-d-2021"]);
+    });
+  });
+
+  it("los datos de prueba no quedan en la base", async () => {
+    expect(await db!.vehicle.count({ where: { make: MAKE } })).toBe(0);
   });
 });

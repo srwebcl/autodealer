@@ -35,15 +35,10 @@ export function VehicleCard({ vehicle, headingLevel = 3 }: { vehicle: VehicleCar
             className="object-cover transition-transform duration-700 ease-out-quart group-hover:scale-105"
           />
         ) : (
-          <VehiclePhotoPlaceholder label={vehicle.isDemo ? "Foto demo" : undefined} />
+          <VehiclePhotoPlaceholder />
         )}
         <div className="absolute inset-x-0 top-0 flex items-start justify-between p-3">
           <StatusBadge status={vehicle.status} />
-          {vehicle.isDemo ? (
-            <span className="ml-auto rounded-sm bg-ink/80 px-2 py-1 text-[0.62rem] font-bold uppercase tracking-[0.18em] text-brand-yellow ring-1 ring-brand-yellow/40">
-              Demo
-            </span>
-          ) : null}
         </div>
       </div>
 

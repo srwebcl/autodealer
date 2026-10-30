@@ -82,18 +82,4 @@ describe.skipIf(!db)("esquema e integridad", () => {
       await expect(tx.siteSettings.create({ data: { id: 2, businessName: "X" } })).rejects.toThrow();
     });
   });
-
-  it("el seed dejó demo idempotente y respeta la regla precio+año", async () => {
-    const demos = await db!.vehicle.findMany({ where: { isDemo: true } });
-    const slugs = new Set(demos.map((d) => d.slug));
-    expect(slugs.size).toBe(demos.length);
-    for (const v of demos) {
-      expect(v.slug.startsWith("demo-")).toBe(true);
-      if (v.published) {
-        expect(v.priceClp).not.toBeNull();
-        expect(v.year).not.toBeNull();
-      }
-    }
-    expect(demos.find((d) => d.priceClp === null)?.published).toBe(false);
-  });
 });

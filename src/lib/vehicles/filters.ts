@@ -114,17 +114,13 @@ export function filtersToSearch(f: Partial<CatalogFilters>): string {
   return qs ? `?${qs}` : "";
 }
 
-export function publicVehicleBase(includeDemo: boolean): Prisma.VehicleWhereInput {
-  return {
-    published: true,
-    status: { in: [...CATALOG_STATUSES] },
-    ...(includeDemo ? {} : { isDemo: false }),
-  };
+export function publicVehicleBase(): Prisma.VehicleWhereInput {
+  return { published: true, status: { in: [...CATALOG_STATUSES] } };
 }
 
 /** Construye el WHERE de Prisma. Solo usa valores validados; Prisma parametriza la consulta. */
-export function buildVehicleWhere(f: CatalogFilters, includeDemo: boolean): Prisma.VehicleWhereInput {
-  const and: Prisma.VehicleWhereInput[] = [publicVehicleBase(includeDemo)];
+export function buildVehicleWhere(f: CatalogFilters): Prisma.VehicleWhereInput {
+  const and: Prisma.VehicleWhereInput[] = [publicVehicleBase()];
 
   if (f.q) {
     // Cada palabra debe aparecer en marca, modelo o versión.

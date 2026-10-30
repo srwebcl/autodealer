@@ -7,7 +7,6 @@ const r2EnvSchema = z.object({
   R2_ACCESS_KEY_ID: z.string().min(16),
   R2_SECRET_ACCESS_KEY: z.string().min(32),
   R2_BUCKET_NAME: z.string().regex(/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/),
-  R2_PUBLIC_BASE_URL: z.string().url().refine((u) => u.startsWith("https://"), "R2_PUBLIC_BASE_URL debe ser https"),
 });
 
 export type R2Env = z.infer<typeof r2EnvSchema>;
@@ -18,19 +17,7 @@ export function getR2Env(source: Record<string, string | undefined> = process.en
     // Solo nombres de variables, nunca valores.
     throw new Error(`Configuración de R2 inválida: ${r.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}`);
   }
-  // r2.dev es solo para desarrollo (con límite de tráfico): en producción se exige dominio propio.
-  if (source.VERCEL_ENV === "production" && isR2DevUrl(r.data.R2_PUBLIC_BASE_URL)) {
-    throw new Error("R2_PUBLIC_BASE_URL usa r2.dev: en producción configura un dominio personalizado (p. ej. https://img.autodealer.cl)");
-  }
   return r.data;
-}
-
-export function isR2DevUrl(url: string): boolean {
-  try {
-    return new URL(url).hostname.endsWith(".r2.dev");
-  } catch {
-    return false;
-  }
 }
 
 /** Interfaz mínima que usa la sincronización (permite pruebas con un almacenamiento falso). */
@@ -86,7 +73,7 @@ export class R2Storage implements ObjectStorage {
   }
 
   publicUrl(key: string) {
-    return publicImageUrl(key, this.env.R2_PUBLIC_BASE_URL)!;
+    return publicImageUrl(key)!;
   }
 
   /** Para verificar el alcance de la credencial: listar buckets debe estar prohibido. */
@@ -106,8 +93,11 @@ export class R2Storage implements ObjectStorage {
     return { allowed: res.ok, status: res.status };
   }
 
-  async get(key: string): Promise<Response> {
-    return this.client.fetch(this.url(key), { signal: AbortSignal.timeout(15_000) });
+  async get(key: string, ifNoneMatch?: string | null): Promise<Response> {
+    return this.client.fetch(this.url(key), {
+      headers: ifNoneMatch ? { "If-None-Match": ifNoneMatch } : undefined,
+      signal: AbortSignal.timeout(15_000),
+    });
   }
 }
 

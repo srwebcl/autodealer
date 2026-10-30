@@ -35,7 +35,6 @@ const cardSelect = {
   transmission: true,
   fuelType: true,
   status: true,
-  isDemo: true,
   images: { orderBy: { position: "asc" }, take: 1, select: { storageKey: true, altText: true } },
 } satisfies Prisma.VehicleSelect;
 
@@ -60,13 +59,12 @@ export function toCard(row: CardRow): VehicleCardData {
     transmission: row.transmission ? transmissionLabels[row.transmission] : null,
     fuelType: row.fuelType ? fuelTypeLabels[row.fuelType] : null,
     status: row.status,
-    isDemo: row.isDemo,
     image: src ? { src, alt: altFor(row, first?.altText) } : null,
   };
 }
 
-export async function listVehicles(db: Db, filters: CatalogFilters, includeDemo: boolean) {
-  const where = buildVehicleWhere(filters, includeDemo);
+export async function listVehicles(db: Db, filters: CatalogFilters) {
+  const where = buildVehicleWhere(filters);
   const total = await db.vehicle.count({ where });
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const page = Math.min(filters.pagina, pageCount);
@@ -80,9 +78,9 @@ export async function listVehicles(db: Db, filters: CatalogFilters, includeDemo:
   return { vehicles: rows.map(toCard), total, page, pageCount, pageSize: PAGE_SIZE };
 }
 
-export async function listFeatured(db: Db, limit: number, includeDemo: boolean) {
+export async function listFeatured(db: Db, limit: number) {
   const rows = await db.vehicle.findMany({
-    where: publicVehicleBase(includeDemo),
+    where: publicVehicleBase(),
     orderBy: buildVehicleOrderBy("recientes"),
     take: limit,
     select: cardSelect,
@@ -91,8 +89,8 @@ export async function listFeatured(db: Db, limit: number, includeDemo: boolean) 
 }
 
 /** Opciones de filtro basadas solo en datos existentes del catálogo público. */
-export async function getFacets(db: Db, includeDemo: boolean) {
-  const where = publicVehicleBase(includeDemo);
+export async function getFacets(db: Db) {
+  const where = publicVehicleBase();
   const [makes, fuels, transmissions, drivetrains, ranges] = await Promise.all([
     db.vehicle.groupBy({ by: ["make"], where, _count: { _all: true }, orderBy: { make: "asc" } }),
     db.vehicle.groupBy({ by: ["fuelType"], where: { ...where, fuelType: { not: null } }, _count: { _all: true } }),
@@ -123,13 +121,12 @@ export type CatalogFacets = Awaited<ReturnType<typeof getFacets>>;
  * Ficha pública. Se muestran disponibles, reservados y vendidos (estos con aviso y
  * sin indexar, para no romper enlaces compartidos). Retirados o no publicados: null.
  */
-export async function findVehicleBySlug(db: Db, slug: string, includeDemo: boolean): Promise<VehicleDetailData | null> {
+export async function findVehicleBySlug(db: Db, slug: string): Promise<VehicleDetailData | null> {
   const row = await db.vehicle.findFirst({
     where: {
       slug,
       published: true,
       status: { in: [...CATALOG_STATUSES, "SOLD"] },
-      ...(includeDemo ? {} : { isDemo: false }),
     },
     include: {
       images: { orderBy: { position: "asc" } },
@@ -164,9 +161,8 @@ export async function listRelated(
   db: Db,
   v: { id: string; make: string; priceClp?: number | null },
   limit: number,
-  includeDemo: boolean,
 ) {
-  const base = { ...publicVehicleBase(includeDemo), id: { not: v.id } };
+  const base = { ...publicVehicleBase(), id: { not: v.id } };
   const sameMake = await db.vehicle.findMany({
     where: { ...base, make: { equals: v.make, mode: "insensitive" } },
     orderBy: buildVehicleOrderBy("recientes"),
@@ -179,7 +175,7 @@ export async function listRelated(
     const price = v.priceClp;
     const others = await db.vehicle.findMany({
       where: {
-        ...publicVehicleBase(includeDemo),
+        ...publicVehicleBase(),
         id: { notIn: exclude },
         ...(price ? { priceClp: { gte: Math.round(price * 0.7), lte: Math.round(price * 1.3) } } : {}),
       },
@@ -193,9 +189,9 @@ export async function listRelated(
 }
 
 /** Para sitemap y generateStaticParams: solo fichas indexables. */
-export async function listIndexableSlugs(db: Db, includeDemo: boolean) {
+export async function listIndexableSlugs(db: Db) {
   return db.vehicle.findMany({
-    where: publicVehicleBase(includeDemo),
+    where: publicVehicleBase(),
     select: { slug: true, updatedAt: true },
     orderBy: { publishedAt: "desc" },
   });

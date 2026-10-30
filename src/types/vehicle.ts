@@ -19,8 +19,6 @@ export interface VehicleCardData {
   fuelType?: string | null;
   status: VehicleStatus;
   image?: { src: string; alt: string } | null;
-  /** true solo para datos ficticios de maqueta. */
-  isDemo?: boolean;
 }
 
 import type { CommercialContent } from "@/lib/instagram/commercial-content";

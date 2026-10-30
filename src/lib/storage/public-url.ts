@@ -1,10 +1,8 @@
 /**
- * URL pública de un objeto en R2. Devuelve null si R2 aún no está configurado
- * (Fase 5); la UI muestra entonces el placeholder.
+ * Ruta pública de una foto guardada en R2. Se sirve desde el propio sitio (/media/...),
+ * así funciona igual en vercel.app y en el dominio final, sin depender de r2.dev.
  */
-export function publicImageUrl(storageKey: string, baseUrl = process.env.R2_PUBLIC_BASE_URL): string | null {
-  if (!baseUrl || !storageKey) return null;
-  const base = baseUrl.replace(/\/+$/, "");
-  const key = storageKey.split("/").map(encodeURIComponent).join("/");
-  return `${base}/${key}`;
+export function publicImageUrl(storageKey: string): string | null {
+  if (!storageKey) return null;
+  return `/media/${storageKey.split("/").map(encodeURIComponent).join("/")}`;
 }

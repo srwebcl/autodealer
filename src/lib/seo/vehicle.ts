@@ -1,4 +1,5 @@
 import { siteConfig } from "@/config/site";
+import { absoluteUrl } from "@/lib/seo/urls";
 import { formatClp, formatKm, vehicleTitle } from "@/lib/utils/format";
 import type { VehicleDetailData, VehicleStatus } from "@/types/vehicle";
 
@@ -57,7 +58,7 @@ export function vehicleJsonLd(v: VehicleDetailData, url: string): Record<string,
   if (v.engine) data.vehicleEngine = { "@type": "EngineSpecification", name: v.engine };
   if (v.color) data.color = v.color;
   if (v.description) data.description = v.description;
-  if (v.images.length) data.image = v.images.map((i) => i.src);
+  if (v.images.length) data.image = v.images.map((i) => (i.src.startsWith("/") ? absoluteUrl(i.src) : i.src));
 
   const avail = availability[v.status];
   if (v.priceClp != null && avail) {

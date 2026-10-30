@@ -2,12 +2,10 @@ import { Container } from "@/components/layout/container";
 import { ButtonLink } from "@/components/ui/button-link";
 import { ArrowRightIcon } from "@/components/ui/icons";
 import { SectionHeading } from "@/components/ui/section-heading";
-import { DemoNotice } from "@/components/vehicles/demo-notice";
 import { VehicleGrid } from "@/components/vehicles/vehicle-grid";
 import type { VehicleCardData } from "@/types/vehicle";
 
 export function FeaturedVehicles({ vehicles }: { vehicles: VehicleCardData[] }) {
-  const isDemo = vehicles.some((v) => v.isDemo);
   return (
     <section aria-labelledby="featured-title" className="py-20 sm:py-28">
       <Container>
@@ -26,11 +24,6 @@ export function FeaturedVehicles({ vehicles }: { vehicles: VehicleCardData[] }) 
             </ButtonLink>
           }
         />
-        {isDemo ? (
-          <div className="mt-8">
-            <DemoNotice />
-          </div>
-        ) : null}
         <div className="mt-8">
           <VehicleGrid vehicles={vehicles} />
         </div>

@@ -1,15 +1,12 @@
 import { existsSync } from "node:fs";
 import { createPrismaClient } from "../src/lib/db/create-client";
-import { demoVehicles } from "./demo-data";
-import { assertSafeToSeed, requireDatabaseUrl } from "./seed-guard";
+import { requireDatabaseUrl } from "./seed-guard";
 
+/** Datos iniciales: solo la configuración comercial confirmada. El inventario viene de Instagram. */
 if (existsSync(".env.local")) process.loadEnvFile(".env.local");
-assertSafeToSeed();
-
 const db = createPrismaClient(requireDatabaseUrl());
 
 async function main() {
-  // Datos comerciales confirmados (sitio anterior y publicaciones de Instagram).
   await db.siteSettings.upsert({
     where: { id: 1 },
     update: {},
@@ -30,22 +27,7 @@ async function main() {
       draftFields: [],
     },
   });
-
-  const baseDate = new Date("2026-10-01T12:00:00Z").getTime();
-  let published = 0;
-
-  for (const [index, vehicle] of demoVehicles.entries()) {
-    // Regla de publicación: precio y año obligatorios.
-    const canPublish = vehicle.priceClp != null && vehicle.year != null;
-    const publishedAt = canPublish ? new Date(baseDate + index * 86_400_000) : null;
-    if (canPublish) published++;
-
-    const data = { ...vehicle, isDemo: true, source: "MANUAL" as const, published: canPublish, publishedAt };
-    await db.vehicle.upsert({ where: { slug: vehicle.slug }, update: data, create: data });
-  }
-
-  const total = await db.vehicle.count({ where: { isDemo: true } });
-  console.log(`Seed OK: ${total} vehículos demo (${published} publicados), configuración comercial lista.`);
+  console.log("Seed OK: configuración comercial lista.");
 }
 
 main()
