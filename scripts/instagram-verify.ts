@@ -118,7 +118,7 @@ async function main() {
   console.log(`leídas: ${all.length} · rango: ${times[0]?.slice(0, 10)} → ${times.at(-1)?.slice(0, 10)}`);
   console.log(`por tipo: ${JSON.stringify(byType)}`);
   console.log(`con caption: ${withCaption}/${all.length}`);
-  console.log(`carruseles: ${carousels.length} · hijos por carrusel: min ${Math.min(...childCounts, 0)} / máx ${Math.max(...childCounts, 0)} · con paginación de hijos: ${childPaged}`);
+  console.log(`carruseles: ${carousels.length} · hijos por carrusel: min ${childCounts.length ? Math.min(...childCounts) : 0} / máx ${childCounts.length ? Math.max(...childCounts) : 0} · con paginación de hijos: ${childPaged}`);
   console.log(`imágenes sin media_url: ${missingUrl}`);
   console.log(`hosts de medios: ${[...mediaHosts].join(", ")}`);
 

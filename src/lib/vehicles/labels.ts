@@ -20,6 +20,7 @@ export const drivetrainLabels: Record<Drivetrain, string> = {
   RWD: "Trasera",
   AWD: "AWD",
   FOUR_WD: "4x4",
+  TWO_WD: "4x2",
 };
 
 export const statusLabels: Record<VehicleStatus, string> = {

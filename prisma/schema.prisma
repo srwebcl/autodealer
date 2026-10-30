@@ -44,6 +44,7 @@ enum Drivetrain {
   RWD
   AWD
   FOUR_WD
+  TWO_WD // "4x2" sin indicar eje: no se infiere delantera ni trasera
 }
 
 enum InstagramMediaType {

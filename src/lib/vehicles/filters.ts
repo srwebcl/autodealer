@@ -24,6 +24,7 @@ export const transmissionParam = {
 
 export const drivetrainParam = {
   "4x4": "FOUR_WD",
+  "4x2": "TWO_WD",
   awd: "AWD",
   delantera: "FWD",
   trasera: "RWD",

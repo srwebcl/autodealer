@@ -67,6 +67,7 @@ const BRANDS: [canonical: string, aliases: string[]][] = [
   ["DFSK", ["dfsk"]],
   ["Dodge", ["dodge"]],
   ["Dongfeng", ["dongfeng"]],
+  ["Exeed", ["exeed"]],
   ["Fiat", ["fiat"]],
   ["Ford", ["ford"]],
   ["Foton", ["foton"]],
@@ -78,6 +79,14 @@ const BRANDS: [canonical: string, aliases: string[]][] = [
   ["Infiniti", ["infiniti"]],
   ["Isuzu", ["isuzu"]],
   ["JAC", ["jac"]],
+  ["JMC", ["jmc"]],
+  ["Kaiyi", ["kaiyi"]],
+  ["GAC", ["gac"]],
+  ["Hongqi", ["hongqi"]],
+  ["Lynk & Co", ["lynk & co", "lynk&co"]],
+  ["Zeekr", ["zeekr"]],
+  ["Deepal", ["deepal"]],
+  ["Riddara", ["riddara"]],
   ["Jaguar", ["jaguar"]],
   ["Jeep", ["jeep"]],
   ["Jetour", ["jetour"]],
@@ -102,11 +111,29 @@ const BRANDS: [canonical: string, aliases: string[]][] = [
   ["Skoda", ["skoda", "škoda"]],
   ["SsangYong", ["ssangyong", "ssang yong"]],
   ["Subaru", ["subaru"]],
+  ["SWM", ["swm"]],
   ["Suzuki", ["suzuki"]],
   ["Tesla", ["tesla"]],
   ["Toyota", ["toyota"]],
   ["Volkswagen", ["volkswagen", "vw"]],
   ["Volvo", ["volvo"]],
+];
+
+/** Modelos de más de una palabra: evita cortar "Grand Vitara" en "Grand". */
+const MULTIWORD_MODELS = [
+  "grand vitara",
+  "grand i10",
+  "grand cherokee",
+  "land cruiser",
+  "santa fe",
+  "range rover",
+  "rav 4",
+  "cr v",
+  "hr v",
+  "c hr",
+  "new beetle",
+  "great wall",
+  "x trail",
 ];
 
 const LABELS: Record<ParsedField | "features", RegExp> = {
@@ -115,7 +142,7 @@ const LABELS: Record<ParsedField | "features", RegExp> = {
   version: /^(version|versión|terminacion|terminación)$/,
   year: /^(ano|año|año modelo|modelo año)$/,
   mileageKm: /^(kilometraje|km|kms|kilometros|kilómetros|recorrido)$/,
-  priceClp: /^(precio|valor|precio contado|precio final)$/,
+  priceClp: /^(precio|valor)\b/, // "Precio", "Precio de Ocasión", "Valor contado / oferta"
   engine: /^(motor|cilindrada|motorizacion|motorización)$/,
   fuelType: /^(combustible|motor tipo)$/,
   transmission: /^(transmision|transmisión|caja|caja de cambios)$/,
@@ -181,6 +208,17 @@ export function parseMileage(raw: string): number | null {
   return n;
 }
 
+/** Primera categoría mencionada (para valores de etiqueta: "4x4 con selector (4x2 / 4H)" → 4x4). */
+function firstKeyword<T extends string>(text: string, table: [RegExp, T][]): T | null {
+  const t = deaccent(text);
+  let best: { value: T; index: number } | null = null;
+  for (const [re, value] of table) {
+    const m = new RegExp(re.source, re.flags.replace("g", "")).exec(t);
+    if (m && (!best || m.index < best.index)) best = { value, index: m.index };
+  }
+  return best?.value ?? null;
+}
+
 function matchKeyword<T extends string>(text: string, table: [RegExp, T][]): T | null {
   const t = deaccent(text);
   const hits = new Set(table.filter(([re]) => re.test(t)).map(([, v]) => v));
@@ -201,11 +239,20 @@ const TRANSMISSION_TABLE: [RegExp, Transmission][] = [
   [/\b(manual|mecanica|mecanico|mt)\b/, "MANUAL"],
 ];
 
+const DRIVETRAIN_LABEL_TABLE: [RegExp, Drivetrain][] = [
+  [/\b(4x4|4wd)\b/, "FOUR_WD"],
+  [/\b(awd|4motion|quattro|xdrive|4matic|all-?grip|integral)\b/, "AWD"],
+  [/\b(fwd|delantera)\b/, "FWD"],
+  [/\b(rwd|trasera)\b/, "RWD"],
+  [/\b(4x2|2wd)\b/, "TWO_WD"], // eje no indicado: no se infiere
+];
+
 const DRIVETRAIN_TABLE: [RegExp, Drivetrain][] = [
   [/\b(4x4|4wd)\b/, "FOUR_WD"],
   [/\b(awd|4motion|quattro|xdrive|4matic|all-?grip)\b/, "AWD"],
-  [/\b(4x2|fwd|traccion delantera)\b/, "FWD"],
+  [/\b(fwd|traccion delantera)\b/, "FWD"],
   [/\b(rwd|traccion trasera)\b/, "RWD"],
+  [/\b(4x2|2wd)\b/, "TWO_WD"],
 ];
 
 function findBrand(text: string): { canonical: string; index: number; length: number } | null {
@@ -231,6 +278,27 @@ export function canonicalBrand(raw: string): string | null {
   const b = findBrand(raw);
   return b && b.index === 0 ? b.canonical : null;
 }
+
+/**
+ * "Hyundai Tucson" → { make: Hyundai, model: Tucson } · "JAC T8 XE Advance 4x4" → { JAC, T8, "XE Advance 4x4" }.
+ * Devuelve null si el texto no empieza con una marca conocida.
+ */
+export function splitMakeModel(raw: string): { make: string; model: string; version?: string } | null {
+  const brand = findBrand(raw);
+  if (!brand || brand.index > 0) return null;
+  const rest = raw.slice(brand.length).replace(/^[\s\-–:|]+/, "").trim();
+  if (!rest) return null;
+  const restKey = deaccent(rest).replace(/[-\s]+/g, " ");
+  const multi = MULTIWORD_MODELS.find((m) => restKey === m || restKey.startsWith(`${m} `));
+  const wordCount = multi ? multi.split(" ").length : 1;
+  const tokens = rest.split(/\s+/);
+  const model = tokens.slice(0, wordCount).join(" ");
+  const version = tokens.slice(wordCount).join(" ").trim();
+  return { make: brand.canonical, model, ...(version ? { version } : {}) };
+}
+
+/** Líneas comerciales que no describen el vehículo. */
+const PROMO_LINE = /^(financiamiento|recibimos tu vehiculo|consignacion|facilidades|ubicacion|direccion|horario|contacto|whatsapp|telefono|agenda|visitanos|valor contado)/;
 
 const titleCase = (s: string) => s.replace(/\S+/g, (w) => (/\d/.test(w) || w.length <= 3 ? w.toUpperCase() : w[0].toUpperCase() + w.slice(1).toLowerCase()));
 
@@ -258,7 +326,7 @@ export function parseCaption(caption: string | null | undefined): ParseResult {
     const line = stripBullet(rawLine);
     const hasBullet = line !== rawLine.trim();
     // "Clave: valor" o "Clave:" (valor en las líneas siguientes, p. ej. Equipamiento).
-    const m = line.match(/^([\p{L} ]{2,25}?)\s*(?:[:：]\s*(.*)|[\-–]\s*(.+))$/u);
+    const m = line.match(/^([\p{L} /]{2,30}?)\s*(?:[:：]\s*(.*)|[\-–]\s*(.+))$/u);
     if (!m) {
       // En una lista de equipamiento, solo las líneas con viñeta son ítems.
       if (inFeatures && hasBullet && line && !line.startsWith("#")) {
@@ -274,6 +342,14 @@ export function parseCaption(caption: string | null | undefined): ParseResult {
       inFeatures = false;
       return;
     }
+    if (!value && field === "priceClp") {
+      // "💰 VALOR CONTADO / OFERTA:" con el monto en la línea siguiente.
+      const nextLine = lines.slice(i + 1).find((l) => l.trim());
+      const price = nextLine ? parsePrice(stripBullet(nextLine)) : null;
+      if (price !== null) set("priceClp", price, { source: "label", raw: `${line} ${nextLine}`, confidence: 0.9 });
+      consumed.add(i);
+      return;
+    }
     if (!value && field !== "features") return;
     consumed.add(i);
     const p: Provenance = { source: "label", raw: line, confidence: 0.95 };
@@ -284,9 +360,16 @@ export function parseCaption(caption: string | null | undefined): ParseResult {
         set("make", brand ?? titleCase(value), { ...p, confidence: brand ? 0.95 : 0.6 });
         break;
       }
-      case "model":
-        set("model", value, p);
+      case "model": {
+        // "Modelo: Hyundai Tucson" → marca + modelo (+ versión).
+        const split = splitMakeModel(value);
+        if (split) {
+          set("make", split.make, { ...p, confidence: 0.9 });
+          set("model", split.model, p);
+          if (split.version) set("version", split.version, { ...p, confidence: 0.8 });
+        } else set("model", value, p);
         break;
+      }
       case "version":
         set("version", value, p);
         break;
@@ -313,13 +396,13 @@ export function parseCaption(caption: string | null | undefined): ParseResult {
         set("fuelType", matchKeyword(value, FUEL_TABLE), { ...p, confidence: 0.8 });
         break;
       case "fuelType":
-        set("fuelType", matchKeyword(value, FUEL_TABLE), p);
+        set("fuelType", firstKeyword(value, FUEL_TABLE), p);
         break;
       case "transmission":
-        set("transmission", matchKeyword(value, TRANSMISSION_TABLE), p);
+        set("transmission", firstKeyword(value, TRANSMISSION_TABLE), p);
         break;
       case "drivetrain":
-        set("drivetrain", matchKeyword(value, DRIVETRAIN_TABLE), p);
+        set("drivetrain", firstKeyword(value, DRIVETRAIN_LABEL_TABLE), p);
         break;
       case "color":
         set("color", titleCase(value), p);
@@ -335,10 +418,29 @@ export function parseCaption(caption: string | null | undefined): ParseResult {
     }
   });
 
-  // 2) Título (primera línea con contenido): "TOYOTA HILUX 2.4 SRV 4X4 2020".
-  const titleIndex = lines.findIndex((l) => stripBullet(l).length > 0 && !stripBullet(l).startsWith("#"));
-  const title = titleIndex >= 0 ? stripBullet(lines[titleIndex]) : "";
-  const brand = title ? findBrand(title) : null;
+  // 2) Titular: "TOYOTA HILUX 2.4 SRV 4X4 2020" o "🚙🔥 ¡ESPACIO Y CONFORT: HYUNDAI TUCSON 2.0 CRDI 2018! 🔥".
+  //    Se buscan las primeras líneas con contenido; si hay ":", se mira el texto posterior.
+  let titleIndex = -1;
+  let title = "";
+  let brand: ReturnType<typeof findBrand> = null;
+  const candidates = lines
+    .map((l, i) => ({ i, text: stripBullet(l).replace(/^[¡!]+/, "") }))
+    .filter((c) => c.text && !c.text.startsWith("#"))
+    .slice(0, 5);
+  for (const c of candidates) {
+    const segments = [c.text, ...(c.text.includes(":") ? [c.text.slice(c.text.lastIndexOf(":") + 1).trim()] : [])];
+    for (const seg of segments) {
+      const clean = seg.replace(/^[¡!\s]+/, "").replace(/[!¡\p{Extended_Pictographic}\s]+$/u, "");
+      const b = findBrand(clean);
+      if (b && b.index <= 2) {
+        titleIndex = c.i;
+        title = clean;
+        brand = b;
+        break;
+      }
+    }
+    if (brand) break;
+  }
   if (brand && brand.index <= 2) {
     const p: Provenance = { source: "title", raw: title, confidence: 0.8 };
     set("make", brand.canonical, p);
@@ -379,7 +481,7 @@ export function parseCaption(caption: string | null | undefined): ParseResult {
 
   // 4) Descripción: texto libre restante, sin hashtags ni líneas ya interpretadas.
   const free = lines
-    .filter((l, i) => !consumed.has(i) && l && !/^#/.test(l) && !/^(@|https?:\/\/)/.test(l))
+    .filter((l, i) => !consumed.has(i) && l && !/^#/.test(l) && !/^(@|https?:\/\/)/.test(l) && !PROMO_LINE.test(deaccent(stripBullet(l))))
     .map((l) => l.replace(/(?:^|\s)#[\p{L}\d_]+/gu, "").trim())
     .filter(Boolean);
   if (free.length) vehicle.description = free.join("\n").slice(0, 4000);
