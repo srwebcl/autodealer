@@ -18,7 +18,19 @@ export function getR2Env(source: Record<string, string | undefined> = process.en
     // Solo nombres de variables, nunca valores.
     throw new Error(`Configuración de R2 inválida: ${r.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}`);
   }
+  // r2.dev es solo para desarrollo (con límite de tráfico): en producción se exige dominio propio.
+  if (source.VERCEL_ENV === "production" && isR2DevUrl(r.data.R2_PUBLIC_BASE_URL)) {
+    throw new Error("R2_PUBLIC_BASE_URL usa r2.dev: en producción configura un dominio personalizado (p. ej. https://img.autodealer.cl)");
+  }
   return r.data;
+}
+
+export function isR2DevUrl(url: string): boolean {
+  try {
+    return new URL(url).hostname.endsWith(".r2.dev");
+  } catch {
+    return false;
+  }
 }
 
 /** Interfaz mínima que usa la sincronización (permite pruebas con un almacenamiento falso). */
@@ -75,6 +87,27 @@ export class R2Storage implements ObjectStorage {
 
   publicUrl(key: string) {
     return publicImageUrl(key, this.env.R2_PUBLIC_BASE_URL)!;
+  }
+
+  /** Para verificar el alcance de la credencial: listar buckets debe estar prohibido. */
+  async canListBuckets(): Promise<boolean> {
+    const res = await this.client.fetch(`https://${this.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/`, {
+      signal: AbortSignal.timeout(15_000),
+    });
+    return res.ok;
+  }
+
+  /** ¿La credencial puede escribir en otro bucket? Debe ser falso. */
+  async canWriteToBucket(bucket: string): Promise<{ allowed: boolean; status: number }> {
+    const res = await this.client.fetch(
+      `https://${this.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${bucket}/autodealer-scope-check.txt`,
+      { method: "PUT", body: "x", signal: AbortSignal.timeout(15_000) },
+    );
+    return { allowed: res.ok, status: res.status };
+  }
+
+  async get(key: string): Promise<Response> {
+    return this.client.fetch(this.url(key), { signal: AbortSignal.timeout(15_000) });
   }
 }
 

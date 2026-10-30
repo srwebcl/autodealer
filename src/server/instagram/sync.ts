@@ -25,9 +25,17 @@ export interface SyncOptions {
   /** Reintentos máximos para publicaciones en ERROR con contenido sin cambios. */
   maxAttempts: number;
   lockTtlMs: number;
+  /**
+   * Solo se publican automáticamente publicaciones de Instagram desde esta fecha.
+   * Las anteriores (históricas, disponibilidad no confirmada) quedan como borrador.
+   * null = nunca publicar automáticamente.
+   */
+  autoPublishSince: Date | null;
+  /** Prueba controlada: procesar solo estos IDs de publicación. */
+  onlyMediaIds?: string[];
 }
 
-export const DEFAULT_SYNC_OPTIONS: Omit<SyncOptions, "since"> = {
+export const DEFAULT_SYNC_OPTIONS: Omit<SyncOptions, "since" | "autoPublishSince"> = {
   maxPostsPerRun: 15,
   maxImagesPerPost: 20,
   maxStorageBytes: 8 * 1024 ** 3,
@@ -170,6 +178,7 @@ export async function runSync(deps: SyncDeps, trigger: SyncTrigger, opts: SyncOp
       for (const media of page) {
         const published = new Date(media.timestamp);
         if (published < opts.since) break scan; // la API devuelve de más reciente a más antigua
+        if (opts.onlyMediaIds && !opts.onlyMediaIds.includes(media.id)) continue;
         stats.seen++;
 
         const existing = await db.instagramPost.findUnique({ where: { instagramMediaId: media.id } });
@@ -349,6 +358,10 @@ async function processPost(a: ProcessArgs): Promise<ProcessOutcome> {
 
   // 4) Reglas de publicación.
   const blockers = publishBlockers(parsed.vehicle, stored.length);
+  const postDate = new Date(media.timestamp);
+  if (!a.opts.autoPublishSince || postDate < a.opts.autoPublishSince) {
+    blockers.push("Disponibilidad no confirmada (publicación anterior al inicio de la publicación automática): requiere validación");
+  }
   const canPublish = blockers.length === 0;
   const locked = existingVehicle?.lockedFields ?? [];
   const data = vehicleDataFromParsed(parsed.vehicle, locked);

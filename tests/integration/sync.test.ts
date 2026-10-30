@@ -92,7 +92,7 @@ const deps = (): SyncDeps => ({
   },
 });
 
-const opts = { ...DEFAULT_SYNC_OPTIONS, since: new Date("2026-10-01T00:00:00Z") };
+const opts = { ...DEFAULT_SYNC_OPTIONS, since: new Date("2026-10-01T00:00:00Z"), autoPublishSince: new Date("2026-10-01T00:00:00Z") };
 async function sync() {
   const r = await runSync(deps(), "SCRIPT", opts);
   if (r.status !== "locked") runIds.push(r.runId);
@@ -224,6 +224,34 @@ describe.skipIf(!db)("sincronización Instagram (fakes + base real)", () => {
     if (r.status === "locked") throw new Error("locked");
     runIds.push(r.runId);
     expect(r.stats).toMatchObject({ processed: 1, deferred: 3 });
+  });
+
+  it("publicaciones históricas (antes de autoPublishSince) quedan como borrador", async () => {
+    const r = await runSync(deps(), "SCRIPT", { ...opts, autoPublishSince: new Date("2026-10-25T00:00:00Z") });
+    if (r.status === "locked") throw new Error("locked");
+    runIds.push(r.runId);
+    expect(r.stats.published).toBe(0);
+    const hilux = await vehicleFor(`${P}1`);
+    expect(hilux).toMatchObject({ published: false, publishedAt: null });
+    const post = await db!.instagramPost.findUnique({ where: { instagramMediaId: `${P}1` } });
+    expect(post?.syncStatus).toBe("PENDING");
+    expect(post?.lastError).toMatch(/Disponibilidad no confirmada/);
+  });
+
+  it("sin autoPublishSince no se publica nada automáticamente", async () => {
+    const r = await runSync(deps(), "SCRIPT", { ...opts, autoPublishSince: null });
+    if (r.status === "locked") throw new Error("locked");
+    runIds.push(r.runId);
+    expect(r.stats.published).toBe(0);
+    expect(await db!.vehicle.count({ where: { published: true, instagramPost: { instagramMediaId: { startsWith: P } } } })).toBe(0);
+  });
+
+  it("prueba controlada: solo procesa los IDs indicados", async () => {
+    const r = await runSync(deps(), "SCRIPT", { ...opts, onlyMediaIds: [`${P}1`] });
+    if (r.status === "locked") throw new Error("locked");
+    runIds.push(r.runId);
+    expect(r.stats).toMatchObject({ seen: 1, processed: 1, created: 1 });
+    expect(await db!.instagramPost.count({ where: { instagramMediaId: { startsWith: P } } })).toBe(1);
   });
 
   it("registra la ejecución y sus eventos sin URLs firmadas", async () => {

@@ -13,7 +13,7 @@ La especificación completa está en [`AUTODEALER_MASTER_PLAN.md`](AUTODEALER_MA
 | 2. Datos (Neon + Prisma) | ✅ |
 | 3. Catálogo real, filtros, fichas, SEO | ✅ |
 | 4. Panel administrativo | Pendiente |
-| 5. Instagram + R2 | Pendiente |
+| 5. Instagram + R2 | En curso (motor listo; falta validar con credenciales reales) |
 | 6. QA | Pendiente |
 | 7. Preview y lanzamiento | Pendiente |
 
@@ -88,6 +88,28 @@ Usuarios/sesiones: los genera Better Auth en la Fase 4.
 
 Código: filtros puros en `src/lib/vehicles/filters.ts`, consultas en `src/server/vehicles/repository.ts` (probadas contra la base) y envoltorios cacheados en `queries.ts`.
 
+## Instagram → Neon + R2
+
+Flujo seguro de puesta en marcha (en este orden):
+
+```bash
+npm run ig:verify    # solo lectura: host, tipo de token, vencimiento, permisos, publicaciones/carruseles
+npm run r2:verify    # alcance de la clave (solo el bucket), escritura/lectura/borrado de prueba, URL pública
+npm run ig:preview   # solo lectura: qué se publicaría y por qué (últimos 60 días por defecto)
+npm run ig:sync -- --only=<id>   # prueba controlada con UNA publicación real
+npm run ig:sync      # importación (escribe en Neon y R2)
+```
+
+- **Sincronización automática:** Vercel Cron cada hora (`vercel.json`) llama a `GET /api/instagram/sync` con `Authorization: Bearer $CRON_SECRET`. Manual: `POST` al mismo endpoint con la misma cabecera.
+- **Sin webhooks:** Meta no ofrece un webhook de publicaciones nuevas propias; se usa sondeo programado.
+- **Fecha de corte:** `INSTAGRAM_SYNC_SINCE` (obligatoria) limita qué publicaciones se leen.
+- **Publicación automática:** solo para publicaciones desde `INSTAGRAM_AUTO_PUBLISH_SINCE`. Si está vacía, **nada se publica solo**; lo histórico queda como borrador "disponibilidad no confirmada".
+- **Reglas:** se publica solo con marca, modelo, año, precio y ≥1 foto en R2. Videos se omiten. Lo que no parece vehículo queda `SKIPPED`; lo incompleto, `PENDING` con el motivo.
+- **Idempotencia:** `instagramMediaId` único, hash de caption + medios, claves de R2 estables, candado `SyncLock`, registro en `SyncRun`/`SyncLog`.
+- **Ediciones:** un caption editado actualiza el mismo vehículo; los campos en `lockedFields` (editados en el panel) no se sobrescriben; la sync **nunca** cambia el estado comercial.
+- **Costos:** tope interno de 8 GB en R2 (plan gratuito: 10 GB), máx. 15 publicaciones por ejecución, imágenes ≤ 10 MB.
+- **Imágenes en producción:** `r2.dev` se rechaza con `VERCEL_ENV=production`. Se guarda `storageKey` (fuente de verdad) y `publicUrl` (referencia); cambiar `R2_PUBLIC_BASE_URL` a un dominio propio no requiere migración.
+
 ## Variables de entorno
 
 Copia `.env.example` a `.env.local`. **Nunca** subas `.env.local` a Git ni compartas secretos por chat.
@@ -98,7 +120,10 @@ Copia `.env.example` a `.env.local`. **Nunca** subas `.env.local` a Git ni compa
 | `DATABASE_URL` | 2 | Neon con pooling (runtime) |
 | `DATABASE_URL_UNPOOLED` | 2 | Neon directa (migraciones) |
 | `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` | 4 | Sesiones del panel |
-| `INSTAGRAM_*` | 5 | API oficial de Instagram (solo servidor) |
+| `INSTAGRAM_ACCESS_TOKEN`, `INSTAGRAM_USER_ID` | 5 | API oficial de Instagram (solo servidor) |
+| `INSTAGRAM_GRAPH_HOST`, `INSTAGRAM_GRAPH_VERSION` | 5 | Host y versión de la API Graph |
+| `INSTAGRAM_SYNC_SINCE` | 5 | Fecha de corte de lectura (obligatoria) |
+| `INSTAGRAM_AUTO_PUBLISH_SINCE` | 5 | Desde cuándo se publica automáticamente (vacía = nunca) |
 | `R2_*` | 5 | Almacenamiento de imágenes (`R2_PUBLIC_BASE_URL` ya lo usa el catálogo) |
 | `CRON_SECRET` | 5 | Protege la ruta de sincronización programada |
 

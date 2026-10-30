@@ -12,6 +12,12 @@ const schema = z.object({
     .string({ error: "INSTAGRAM_SYNC_SINCE no está definida (fecha ISO, ej. 2026-09-01)" })
     .regex(/^\d{4}-\d{2}-\d{2}$/, "INSTAGRAM_SYNC_SINCE debe ser AAAA-MM-DD"),
   INSTAGRAM_SYNC_MAX_POSTS: z.coerce.number().int().min(1).max(50).optional(),
+  // Opcional a propósito: si falta, nada se publica automáticamente (todo queda como borrador).
+  INSTAGRAM_AUTO_PUBLISH_SINCE: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "INSTAGRAM_AUTO_PUBLISH_SINCE debe ser AAAA-MM-DD")
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
 });
 
 export type InstagramConfig = z.infer<typeof schema>;
@@ -28,6 +34,7 @@ export function syncOptionsFrom(c: InstagramConfig): SyncOptions {
   return {
     ...DEFAULT_SYNC_OPTIONS,
     since: new Date(`${c.INSTAGRAM_SYNC_SINCE}T00:00:00-03:00`),
+    autoPublishSince: c.INSTAGRAM_AUTO_PUBLISH_SINCE ? new Date(`${c.INSTAGRAM_AUTO_PUBLISH_SINCE}T00:00:00-03:00`) : null,
     ...(c.INSTAGRAM_SYNC_MAX_POSTS ? { maxPostsPerRun: c.INSTAGRAM_SYNC_MAX_POSTS } : {}),
   };
 }
