@@ -54,7 +54,7 @@ export class R2Storage implements ObjectStorage {
   }
 
   async put(key: string, body: Uint8Array, contentType: string) {
-    const res = await this.client.fetch(this.url(key), {
+    const signed = await this.client.sign(this.url(key), {
       method: "PUT",
       body: body as BodyInit,
       headers: {
@@ -62,6 +62,13 @@ export class R2Storage implements ObjectStorage {
         // Clave inmutable (incluye el ID del medio): caché larga en navegadores/CDN.
         "Cache-Control": "public, max-age=31536000, immutable",
       },
+    });
+    // Se envía el Uint8Array directamente (no el Request firmado): así fetch fija Content-Length.
+    // Con el Request, Node ≥22 lo manda como stream sin longitud y R2 responde 411.
+    const res = await fetch(signed.url, {
+      method: "PUT",
+      headers: signed.headers,
+      body: body as BodyInit,
       signal: AbortSignal.timeout(30_000),
     });
     if (!res.ok) throw new Error(`R2 PUT ${res.status}: ${(await res.text()).slice(0, 200)}`);
