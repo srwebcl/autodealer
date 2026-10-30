@@ -43,3 +43,6 @@ next-env.d.ts
 
 # sitio estático anterior (respaldo local, medios pesados; no se versiona)
 /autodealer-web-final/
+
+# cliente Prisma generado
+/src/generated/

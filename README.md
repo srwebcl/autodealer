@@ -10,7 +10,7 @@ La especificación completa está en [`AUTODEALER_MASTER_PLAN.md`](AUTODEALER_MA
 | --- | --- |
 | 0. Inspección y plan | ✅ |
 | 1. Diseño base (layout, portada, tarjetas, datos demo) | ✅ |
-| 2. Datos (Neon + Prisma) | Pendiente |
+| 2. Datos (Neon + Prisma) | ✅ |
 | 3. Catálogo real, filtros, fichas, SEO | Pendiente |
 | 4. Panel administrativo | Pendiente |
 | 5. Instagram + R2 | Pendiente |
@@ -23,7 +23,8 @@ La especificación completa está en [`AUTODEALER_MASTER_PLAN.md`](AUTODEALER_MA
 - Tailwind CSS 4 (tokens en `src/app/globals.css`)
 - Fuentes: Barlow Condensed (títulos) e Inter (texto) vía `next/font`, servidas localmente
 - Vitest 4 para pruebas unitarias
-- Próximas fases: Neon PostgreSQL, Prisma 7, Better Auth, Cloudflare R2, Zod
+- Neon PostgreSQL 18 + Prisma 7.10 (driver adapter `@prisma/adapter-neon`) + Zod 4
+- Próximas fases: Better Auth, Cloudflare R2
 
 ## Requisitos
 
@@ -40,7 +41,40 @@ npm run start        # servir el build
 npm run lint         # ESLint
 npm run typecheck    # TypeScript sin emitir
 npm test             # pruebas unitarias (Vitest)
+npm run test:integration  # pruebas contra la base de .env.local (revierten sus cambios)
 ```
+
+### Base de datos
+
+```bash
+npm run db:migrate      # crear/aplicar migraciones en desarrollo (prisma migrate dev)
+npm run db:deploy       # aplicar migraciones pendientes (CI / Vercel)
+npm run db:status       # estado de migraciones
+npm run db:generate     # regenerar el cliente (también corre en postinstall)
+npm run db:seed         # datos demo + configuración comercial (idempotente; bloqueado en producción)
+npm run db:demo:clear   # borra solo los vehículos con isDemo = true
+npm run db:studio       # explorador visual
+```
+
+- Esquema: `prisma/schema.prisma`. Configuración del CLI: `prisma.config.ts` (carga `.env.local`).
+- Las migraciones usan `DATABASE_URL_UNPOOLED` (directa); la app usa `DATABASE_URL` (pooler).
+- Restricciones CHECK (precio > 0, año 1900–2100, km ≥ 0, formato de slug, `features` como arreglo, publicado ⇒ fecha) están en la migración SQL inicial.
+- Cliente generado en `src/generated/prisma` (no se versiona).
+- En la app, importar `db` desde `@/lib/db` (solo servidor). En scripts, usar `createPrismaClient` de `@/lib/db/create-client`.
+- `GET /api/health` responde `{ status, database }` sin detalles internos.
+
+#### Modelo
+
+| Tabla | Propósito |
+| --- | --- |
+| `Vehicle` | Ficha: datos, estado comercial, publicación, `lockedFields` (campos editados a mano que la sync no pisa), `extraction` (procedencia por campo) |
+| `VehicleImage` | Imágenes en R2 (`storageKey`), orden, único por `(vehicleId, instagramMediaId)` |
+| `InstagramPost` | Publicación original, único por `instagramMediaId`, estado de sync, intentos, `contentHash` para detectar ediciones |
+| `SyncLog` | Eventos de sincronización (sin secretos) |
+| `AuditLog` | Acciones administrativas |
+| `SiteSettings` | Datos comerciales editables (fila única) |
+
+Usuarios/sesiones: los genera Better Auth en la Fase 4.
 
 ## Variables de entorno
 
@@ -49,7 +83,8 @@ Copia `.env.example` a `.env.local`. **Nunca** subas `.env.local` a Git ni compa
 | Variable | Fase | Uso |
 | --- | --- | --- |
 | `NEXT_PUBLIC_SITE_URL` | 1 | URL base para metadata y enlaces canónicos |
-| `DATABASE_URL`, `DIRECT_URL` | 2 | Conexión a Neon (pooled / directa para migraciones) |
+| `DATABASE_URL` | 2 | Neon con pooling (runtime) |
+| `DATABASE_URL_UNPOOLED` | 2 | Neon directa (migraciones) |
 | `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` | 4 | Sesiones del panel |
 | `INSTAGRAM_*` | 5 | API oficial de Instagram (solo servidor) |
 | `R2_*` | 5 | Almacenamiento de imágenes |

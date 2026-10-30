@@ -1,0 +1,213 @@
+// Esquema de AutoDealer. Ver AUTODEALER_MASTER_PLAN.md §8.
+// Las restricciones CHECK viven en la migración SQL (Prisma no las modela).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ──────────────────────────────────────────────────────────────
+
+enum VehicleStatus {
+  AVAILABLE
+  RESERVED
+  SOLD
+  WITHDRAWN
+}
+
+enum VehicleSource {
+  INSTAGRAM
+  MANUAL
+}
+
+enum FuelType {
+  GASOLINE
+  DIESEL
+  HYBRID
+  PLUG_IN_HYBRID
+  ELECTRIC
+  GAS
+  OTHER
+}
+
+enum Transmission {
+  MANUAL
+  AUTOMATIC
+}
+
+enum Drivetrain {
+  FWD
+  RWD
+  AWD
+  FOUR_WD
+}
+
+enum InstagramMediaType {
+  IMAGE
+  VIDEO
+  CAROUSEL_ALBUM
+}
+
+enum SyncStatus {
+  PENDING // en cola o esperando revisión manual (faltan datos obligatorios)
+  PROCESSING
+  SUCCESS
+  ERROR
+  SKIPPED // publicación que no es un vehículo (promoción, aviso, etc.)
+}
+
+enum LogLevel {
+  INFO
+  WARN
+  ERROR
+}
+
+// ─── Inventario ─────────────────────────────────────────────────────────
+
+model Vehicle {
+  id           String        @id @default(uuid()) @db.Uuid
+  slug         String        @unique
+  make         String
+  model        String
+  version      String?
+  year         Int?          @db.SmallInt
+  mileageKm    Int?
+  engine       String?
+  fuelType     FuelType?
+  transmission Transmission?
+  drivetrain   Drivetrain?
+  color        String?
+  priceClp     Int?
+  description  String?
+  /// Lista de equipamiento: string[] validado con Zod.
+  features     Json          @default("[]")
+
+  status      VehicleStatus @default(AVAILABLE)
+  published   Boolean       @default(false)
+  publishedAt DateTime?
+  source      VehicleSource @default(MANUAL)
+  /// true solo para datos ficticios del seed de desarrollo.
+  isDemo      Boolean       @default(false)
+
+  /// Campos editados en el panel: la sincronización con Instagram no los sobrescribe.
+  lockedFields String[] @default([])
+  /// Procedencia y confianza por campo extraído del caption.
+  extraction   Json?
+
+  instagramPostId String?        @unique @db.Uuid
+  instagramPost   InstagramPost? @relation(fields: [instagramPostId], references: [id], onDelete: SetNull)
+  images          VehicleImage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([published, status, publishedAt(sort: Desc)])
+  @@index([make, model])
+  @@index([year])
+  @@index([priceClp])
+  @@index([mileageKm])
+}
+
+model VehicleImage {
+  id               String  @id @default(uuid()) @db.Uuid
+  vehicleId        String  @db.Uuid
+  vehicle          Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  /// ID del medio hijo en Instagram (null si se subió desde el panel).
+  instagramMediaId String?
+  /// Clave del objeto en R2. Nunca una URL firmada ni un secreto.
+  storageKey       String  @unique
+  contentType      String?
+  bytes            Int?
+  width            Int?
+  height           Int?
+  altText          String?
+  position         Int
+
+  createdAt DateTime @default(now())
+
+  @@unique([vehicleId, instagramMediaId])
+  @@index([vehicleId, position])
+}
+
+// ─── Instagram ──────────────────────────────────────────────────────────
+
+model InstagramPost {
+  id               String             @id @default(uuid()) @db.Uuid
+  instagramMediaId String             @unique
+  permalink        String?
+  caption          String?
+  /// Hash del caption + IDs de medios para detectar ediciones en Instagram.
+  contentHash      String?
+  mediaType        InstagramMediaType
+  publishedAt      DateTime?
+  syncStatus       SyncStatus         @default(PENDING)
+  attempts         Int                @default(0)
+  lastError        String?
+  processedAt      DateTime?
+
+  vehicle  Vehicle?
+  syncLogs SyncLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([syncStatus])
+  @@index([publishedAt(sort: Desc)])
+}
+
+model SyncLog {
+  id        String         @id @default(uuid()) @db.Uuid
+  postId    String?        @db.Uuid
+  post      InstagramPost? @relation(fields: [postId], references: [id], onDelete: SetNull)
+  /// Ej: sync.started, media.downloaded, caption.parsed, vehicle.published.
+  eventType String
+  level     LogLevel       @default(INFO)
+  message   String
+  /// Nunca guardar tokens, secretos ni URLs firmadas aquí.
+  details   Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt(sort: Desc)])
+  @@index([postId])
+  @@index([level, createdAt(sort: Desc)])
+}
+
+// ─── Administración ─────────────────────────────────────────────────────
+// Las tablas de usuarios y sesiones las genera Better Auth en la Fase 4.
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  /// ID del usuario administrador (FK se añade cuando exista la tabla de usuarios).
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String?
+  details    Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt(sort: Desc)])
+}
+
+/// Datos comerciales editables desde el panel. Fila única (id = 1).
+model SiteSettings {
+  id              Int      @id @default(1)
+  businessName    String
+  address         String?
+  phoneDisplay    String?
+  phoneE164       String?
+  whatsappNumber  String?
+  email           String?
+  instagramHandle String?
+  instagramUrl    String?
+  /// [{ days: string, time: string }]
+  hours           Json     @default("[]")
+  /// Claves de textos aún no validados por el cliente.
+  draftFields     String[] @default([])
+  updatedAt       DateTime @updatedAt
+}
