@@ -173,5 +173,10 @@ Confirmados: dirección, teléfono/WhatsApp, email, Instagram, logo y colores (s
 ## Recursos
 
 - `public/brand/logo-autodealer.png`: logo oficial. `logo-autodealer-trim.png` es el mismo archivo con el margen transparente recortado.
-- `public/images/hero-tunel.jpg`: imagen de portada (convertida desde `autodealer-car-poster.png` del sitio anterior). **Confirmar la licencia/origen.**
+- `public/images/hero/`: fotos del carrusel de la portada, de [Unsplash](https://unsplash.com/license) (uso comercial gratuito, sin atribución obligatoria). Se eligieron sin patentes legibles. Las marcas (BMW, Ferrari, Mercedes-Benz) aparecen solo como ambientación; AutoDealer no es concesionario oficial de ellas.
+  - `bmw-m4-mate.jpg`: noir. — unsplash.com/photos/CXlzXn-2CVs
+  - `ferrari-458.jpg`: Imil Salyakhutdinov — unsplash.com/photos/fc21uhf88KQ
+  - `mercedes-coupe.jpg`: Willian Cittadin — unsplash.com/photos/V91lvel6Ojg
+  - `bmw-m4-hangar.jpg`: Luca David — unsplash.com/photos/bQNlTbMcj64
+  - `ferrari-488.jpg`: Matt Antonioli — unsplash.com/photos/3akA0XDg1_g
 - `autodealer-web-final/`: sitio estático anterior, conservado como respaldo local y excluido de Git.

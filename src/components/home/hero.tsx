@@ -1,11 +1,24 @@
-import Image from "next/image";
 import { Container } from "@/components/layout/container";
 import { ButtonLink, buttonClasses } from "@/components/ui/button-link";
 import { ArrowRightIcon, PinIcon, WhatsAppIcon } from "@/components/ui/icons";
 import { siteConfig } from "@/config/site";
 import { whatsappUrl } from "@/lib/whatsapp";
-import heroImage from "../../../public/images/hero-tunel.jpg";
+import bmwM4Hangar from "../../../public/images/hero/bmw-m4-hangar.jpg";
+import bmwM4Mate from "../../../public/images/hero/bmw-m4-mate.jpg";
+import ferrari458 from "../../../public/images/hero/ferrari-458.jpg";
+import ferrari488 from "../../../public/images/hero/ferrari-488.jpg";
+import mercedesCoupe from "../../../public/images/hero/mercedes-coupe.jpg";
+import { type HeroSlide, HeroSlideshow } from "./hero-slideshow";
 import { QuickSearch } from "./quick-search";
+
+// Fotos de Unsplash (licencia Unsplash: uso comercial gratuito). Créditos en el README.
+const SLIDES: HeroSlide[] = [
+  { src: bmwM4Mate, mobilePosition: "object-[78%_center]" },
+  { src: ferrari458, mobilePosition: "object-center" },
+  { src: mercedesCoupe, mobilePosition: "object-center" },
+  { src: bmwM4Hangar, mobilePosition: "object-[45%_center]", desktopPosition: "md:object-[center_85%]" },
+  { src: ferrari488, mobilePosition: "object-center" },
+];
 
 export function Hero() {
   return (
@@ -13,21 +26,7 @@ export function Hero() {
       aria-labelledby="hero-title"
       className="relative isolate flex min-h-[100svh] flex-col overflow-hidden bg-ink"
     >
-      {/* Móvil: foto en la mitad superior. Escritorio: foto a sangre completa. */}
-      <div aria-hidden className="absolute inset-x-0 top-0 -z-20 h-[58svh] md:inset-0 md:h-auto">
-        <Image
-          src={heroImage}
-          alt=""
-          fill
-          preload
-          fetchPriority="high"
-          quality={80}
-          placeholder="blur"
-          sizes="100vw"
-          className="object-cover object-[72%_center] md:object-center"
-        />
-        <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-ink to-transparent md:hidden" />
-      </div>
+      <HeroSlideshow slides={SLIDES} />
       {/* Velos para legibilidad: lateral en escritorio, inferior en móvil. */}
       <div
         aria-hidden
