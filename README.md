@@ -163,6 +163,7 @@ tests/unit/                 # Vitest
 - Páginas `/financiamiento` (Autofin, Global, Unidad Crédito, entre otras) y `/seguros` (convenio directo con BCI Seguros), según lo informado por el cliente. Logos en `public/brand/partners/`.
 - Server Action `submitLead` (`src/server/leads/actions.ts`): validación con Zod en servidor (teléfono chileno normalizado a +56…, patente, año), campo trampa contra bots y máximo 5 envíos por hora por visitante (hash de IP, nunca la IP en claro).
 - Cada solicitud se guarda en la tabla `Lead` y el visitante puede enviar el resumen por WhatsApp. **No se envía email**: requiere un servicio de correo (pendiente de autorización).
+- Datos obligatorios en todos los formularios: nombre, teléfono y email. Cada página pide además lo propio de su intención (auto de interés y pie, auto a asegurar, modalidad y datos del auto, motivo y mensaje).
 - Revisar solicitudes: `npm run leads:list -- --dias=7` (hasta que exista el panel de la Fase 4).
 - La ficha de cada vehículo enlaza a `/financiamiento?vehiculo=…` con el auto prellenado.
 

@@ -26,8 +26,16 @@ describe("patente", () => {
 
 describe("parseLead", () => {
   it("financiamiento válido con campos opcionales vacíos", () => {
-    const r = parseLead("financiamiento", { nombre: " Ana Pérez ", telefono: "9 1234 5678", email: "", vehiculo: "", pie: "Sin pie", trabajador: "nada" });
-    expect(r).toEqual({ ok: true, lead: { form: "financiamiento", data: { nombre: "Ana Pérez", telefono: "+56912345678", pie: "Sin pie" } } });
+    const r = parseLead("financiamiento", { nombre: " Ana Pérez ", telefono: "9 1234 5678", email: " Ana@Correo.CL ", vehiculo: "", pie: "Sin pie", trabajador: "nada" });
+    expect(r).toEqual({ ok: true, lead: { form: "financiamiento", data: { nombre: "Ana Pérez", telefono: "+56912345678", email: "ana@correo.cl", pie: "Sin pie" } } });
+  });
+
+  it("nombre, teléfono y email son obligatorios en todos los formularios", () => {
+    for (const form of ["financiamiento", "seguro", "vende", "contacto"]) {
+      const r = parseLead(form, {});
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.fieldErrors).toMatchObject({ nombre: expect.any(String), telefono: expect.any(String), email: "Ingresa tu email" });
+    }
   });
 
   it("errores por campo, en español", () => {
@@ -40,20 +48,20 @@ describe("parseLead", () => {
   });
 
   it("seguro exige vehículo; normaliza patente y año", () => {
-    expect(parseLead("seguro", { nombre: "Luis", telefono: "967546248" })).toMatchObject({ ok: false, fieldErrors: { vehiculo: expect.any(String) } });
-    const r = parseLead("seguro", { nombre: "Luis", telefono: "967546248", vehiculo: "Toyota Hilux", anio: "2020", patente: "ab-cd-12" });
+    expect(parseLead("seguro", { nombre: "Luis", telefono: "967546248", email: "luis@correo.cl" })).toMatchObject({ ok: false, fieldErrors: { vehiculo: expect.any(String) } });
+    const r = parseLead("seguro", { nombre: "Luis", telefono: "967546248", email: "luis@correo.cl", vehiculo: "Toyota Hilux", anio: "2020", patente: "ab-cd-12" });
     expect(r).toMatchObject({ ok: true, lead: { data: { anio: 2020, patente: "ABCD12" } } });
   });
 
   it("año fuera de rango y formulario desconocido", () => {
-    expect(parseLead("seguro", { nombre: "Luis", telefono: "967546248", vehiculo: "Kia", anio: "1890" })).toMatchObject({ ok: false, fieldErrors: { anio: "Año no válido" } });
+    expect(parseLead("seguro", { nombre: "Luis", telefono: "967546248", email: "luis@correo.cl", vehiculo: "Kia", anio: "1890" })).toMatchObject({ ok: false, fieldErrors: { anio: "Año no válido" } });
     expect(parseLead("otro", {})).toMatchObject({ ok: false });
   });
 });
 
 describe("mensaje de WhatsApp", () => {
   it("solo incluye los datos entregados", () => {
-    const r = parseLead("seguro", { nombre: "Luis", telefono: "967546248", vehiculo: "Toyota Hilux", anio: "2020" });
+    const r = parseLead("seguro", { nombre: "Luis", telefono: "967546248", email: "luis@correo.cl", vehiculo: "Toyota Hilux", anio: "2020" });
     if (!r.ok) throw new Error("debió validar");
     const msg = leadWhatsappMessage(r.lead);
     expect(msg).toContain("BCI Seguros");
@@ -65,13 +73,13 @@ describe("mensaje de WhatsApp", () => {
 
 describe("vende tu auto y contacto", () => {
   it("vende exige vehículo y año; normaliza kilometraje y patente", () => {
-    expect(parseLead("vende", { nombre: "Luis", telefono: "967546248", vehiculo: "Kia Rio" })).toMatchObject({
+    expect(parseLead("vende", { nombre: "Luis", telefono: "967546248", email: "luis@correo.cl", vehiculo: "Kia Rio" })).toMatchObject({
       ok: false,
       fieldErrors: { anio: "Indica el año" },
     });
     const r = parseLead("vende", {
       nombre: "Luis",
-      telefono: "967546248",
+      telefono: "967546248", email: "luis@correo.cl",
       vehiculo: "Kia Rio",
       anio: "2019",
       kilometraje: "85.000 km",
@@ -84,16 +92,16 @@ describe("vende tu auto y contacto", () => {
   });
 
   it("kilometraje no numérico", () => {
-    expect(parseLead("vende", { nombre: "Luis", telefono: "967546248", vehiculo: "Kia", anio: "2019", kilometraje: "mucho" })).toMatchObject({
+    expect(parseLead("vende", { nombre: "Luis", telefono: "967546248", email: "luis@correo.cl", vehiculo: "Kia", anio: "2019", kilometraje: "mucho" })).toMatchObject({
       ok: false,
       fieldErrors: { kilometraje: expect.any(String) },
     });
   });
 
   it("contacto exige mensaje; motivo desconocido se descarta", () => {
-    expect(parseLead("contacto", { nombre: "Ana", telefono: "967546248", mensaje: "" })).toMatchObject({ ok: false, fieldErrors: { mensaje: expect.any(String) } });
-    const r = parseLead("contacto", { nombre: "Ana", telefono: "967546248", motivo: "otra cosa", mensaje: "¿Tienen camionetas 4x4?" });
-    expect(r).toEqual({ ok: true, lead: { form: "contacto", data: { nombre: "Ana", telefono: "+56967546248", mensaje: "¿Tienen camionetas 4x4?" } } });
+    expect(parseLead("contacto", { nombre: "Ana", telefono: "967546248", email: "luis@correo.cl", mensaje: "" })).toMatchObject({ ok: false, fieldErrors: { mensaje: expect.any(String) } });
+    const r = parseLead("contacto", { nombre: "Ana", telefono: "967546248", email: "luis@correo.cl", motivo: "otra cosa", mensaje: "¿Tienen camionetas 4x4?" });
+    expect(r).toEqual({ ok: true, lead: { form: "contacto", data: { nombre: "Ana", telefono: "+56967546248", email: "luis@correo.cl", mensaje: "¿Tienen camionetas 4x4?" } } });
     if (!r.ok) throw new Error("debió validar");
     expect(leadWhatsappMessage(r.lead)).toBe("Hola AutoDealer.\nNombre: Ana\n¿Tienen camionetas 4x4?");
   });

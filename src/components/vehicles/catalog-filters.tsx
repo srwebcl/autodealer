@@ -12,7 +12,7 @@ import {
 import { drivetrainLabels, fuelTypeLabels, transmissionLabels } from "@/lib/vehicles/labels";
 import type { CatalogFacets } from "@/server/vehicles/repository";
 import { CleanGetForm } from "./clean-get-form";
-import { selectClass } from "./form-styles";
+import { Select } from "@/components/ui/select";
 
 export const FILTERS_FORM_ID = "filtros-catalogo";
 export const FILTERS_SHEET_ID = "panel-filtros";
@@ -84,8 +84,6 @@ function Range({ children }: { children: [ReactNode, ReactNode] }) {
   );
 }
 
-const sheetSelect = `${selectClass} h-10 bg-graphite-900`;
-
 /**
  * Formulario completo de filtros dentro del panel lateral. Un solo <form> en el DOM:
  * la búsqueda y el orden de la barra se asocian a él con el atributo form=.
@@ -126,22 +124,8 @@ export function CatalogFiltersForm({ filters, facets }: { filters: Filters; face
         {prices.length > 0 ? (
           <Section legend="Precio">
             <Range>
-              <select name="precioMin" aria-label="Precio desde" defaultValue={filters.precioMin ?? ""} className={sheetSelect}>
-                <option value="">Desde</option>
-                {prices.map((p) => (
-                  <option key={p} value={p}>
-                    {formatClp(p)}
-                  </option>
-                ))}
-              </select>
-              <select name="precioMax" aria-label="Precio hasta" defaultValue={filters.precioMax ?? ""} className={sheetSelect}>
-                <option value="">Hasta</option>
-                {prices.map((p) => (
-                  <option key={p} value={p}>
-                    {formatClp(p)}
-                  </option>
-                ))}
-              </select>
+              <Select name="precioMin" aria-label="Precio desde" placeholder="Desde" emptyOption="Cualquiera" defaultValue={filters.precioMin != null ? String(filters.precioMin) : ""} options={prices.map((x) => ({ value: String(x), label: formatClp(x) ?? String(x) }))} className="h-10 bg-graphite-900" />
+              <Select name="precioMax" aria-label="Precio hasta" placeholder="Hasta" emptyOption="Cualquiera" defaultValue={filters.precioMax != null ? String(filters.precioMax) : ""} options={prices.map((x) => ({ value: String(x), label: formatClp(x) ?? String(x) }))} className="h-10 bg-graphite-900" />
             </Range>
           </Section>
         ) : null}
@@ -149,22 +133,8 @@ export function CatalogFiltersForm({ filters, facets }: { filters: Filters; face
         {years.length > 0 ? (
           <Section legend="Año">
             <Range>
-              <select name="anioMin" aria-label="Año desde" defaultValue={filters.anioMin ?? ""} className={sheetSelect}>
-                <option value="">Desde</option>
-                {years.map((y) => (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
-                ))}
-              </select>
-              <select name="anioMax" aria-label="Año hasta" defaultValue={filters.anioMax ?? ""} className={sheetSelect}>
-                <option value="">Hasta</option>
-                {years.map((y) => (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
-                ))}
-              </select>
+              <Select name="anioMin" aria-label="Año desde" placeholder="Desde" emptyOption="Cualquiera" defaultValue={filters.anioMin != null ? String(filters.anioMin) : ""} options={years.map((x) => ({ value: String(x), label: String(x) }))} className="h-10 bg-graphite-900" />
+              <Select name="anioMax" aria-label="Año hasta" placeholder="Hasta" emptyOption="Cualquiera" defaultValue={filters.anioMax != null ? String(filters.anioMax) : ""} options={years.map((x) => ({ value: String(x), label: String(x) }))} className="h-10 bg-graphite-900" />
             </Range>
           </Section>
         ) : null}

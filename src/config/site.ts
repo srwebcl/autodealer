@@ -36,6 +36,7 @@ export const siteConfig = {
 } as const;
 
 export const mainNav = [
+  { href: "/", label: "Inicio" },
   { href: "/vehiculos", label: "Vehículos" },
   { href: "/financiamiento", label: "Financiamiento" },
   { href: "/seguros", label: "Seguros" },

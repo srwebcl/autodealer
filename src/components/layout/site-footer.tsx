@@ -28,11 +28,6 @@ export function SiteFooter() {
         <nav aria-label="Pie de página">
           <h2 className="eyebrow">Navegación</h2>
           <ul className="mt-5 space-y-3">
-            <li>
-              <Link href="/" className="text-sm text-chalk/85 hover:text-chalk">
-                Inicio
-              </Link>
-            </li>
             {mainNav.map((item) => (
               <li key={item.href}>
                 <Link href={item.href} className="text-sm text-chalk/85 hover:text-chalk">

@@ -3,8 +3,8 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Container } from "@/components/layout/container";
 import { SlidersIcon, SortIcon } from "@/components/ui/icons";
+import { Select } from "@/components/ui/select";
 import { ActiveFilters } from "@/components/vehicles/active-filters";
-import { AutoSubmitSelect } from "@/components/vehicles/auto-submit-select";
 import { CatalogEmpty } from "@/components/vehicles/catalog-empty";
 import { CatalogFiltersForm, FILTERS_FORM_ID, FILTERS_SHEET_ID } from "@/components/vehicles/catalog-filters";
 import { CatalogSearch } from "@/components/vehicles/catalog-search";
@@ -84,23 +84,20 @@ async function Catalog({ searchParams }: Pick<PageProps<"/vehiculos">, "searchPa
               </span>
             ) : null}
           </button>
-          <label className="relative shrink-0">
-            <span className="sr-only">Ordenar por</span>
-            <SortIcon width={18} height={18} className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-chalk sm:hidden" />
-            <AutoSubmitSelect
+          <div className="shrink-0">
+            <Select
+              key={filters.orden}
               name="orden"
               form={FILTERS_FORM_ID}
-              key={filters.orden}
+              autoSubmit
+              aria-label="Ordenar por"
               defaultValue={filters.orden}
-              className="select-chevron select-chevron-sm h-11 w-11 cursor-pointer appearance-none rounded-sm border border-white/10 bg-graphite-900 text-sm text-transparent transition-colors hover:border-white/30 focus:border-brand-yellow focus:outline-none sm:w-auto sm:min-w-48 sm:pr-9 sm:pl-3.5 sm:text-chalk [&>option]:bg-graphite-900 [&>option]:text-chalk"
-            >
-              {Object.entries(SORT_OPTIONS).map(([value, text]) => (
-                <option key={value} value={value}>
-                  {text}
-                </option>
-              ))}
-            </AutoSubmitSelect>
-          </label>
+              options={Object.entries(SORT_OPTIONS).map(([value, label]) => ({ value, label }))}
+              compactIcon={<SortIcon width={18} height={18} className="text-chalk" />}
+              align="right"
+              className="h-11! w-11 bg-graphite-900! px-0 sm:w-auto sm:min-w-52 sm:px-3.5"
+            />
+          </div>
         </div>
         <MakeShortcuts filters={filters} makes={facets.makes} />
       </div>

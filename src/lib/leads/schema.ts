@@ -45,12 +45,12 @@ const base = z.object({
       return phone ?? "";
     }),
   email: z
-    .string()
+    .string({ error: "Ingresa tu email" })
     .trim()
+    .min(1, "Ingresa tu email")
     .max(120)
-    .optional()
-    .transform((v) => (v ? v.toLowerCase() : undefined))
-    .pipe(z.email("Email no válido").optional()),
+    .transform((v) => v.toLowerCase())
+    .pipe(z.email("Email no válido, por ejemplo nombre@correo.cl")),
   mensaje: optional(1000),
 });
 

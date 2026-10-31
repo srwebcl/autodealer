@@ -28,17 +28,17 @@ describe.skipIf(!db)("solicitudes (base real, filas de prueba)", () => {
   });
 
   it("guarda financiamiento con datos normalizados y detalles aparte", async () => {
-    const { id } = await createLead(db!, lead("financiamiento", { nombre: "Zz Prueba", telefono: "9 1234 5678", vehiculo: "Peugeot Partner 2024", pie: "Sin pie" }), {
+    const { id } = await createLead(db!, lead("financiamiento", { nombre: "Zz Prueba", telefono: "9 1234 5678", email: "zz@prueba.cl", vehiculo: "Peugeot Partner 2024", pie: "Sin pie" }), {
       page: "/financiamiento",
       ipHash: `${IP}-a`,
     });
     const row = await db!.lead.findUniqueOrThrow({ where: { id } });
-    expect(row).toMatchObject({ type: "FINANCING", status: "NEW", name: "Zz Prueba", phone: "+56912345678", email: null, page: "/financiamiento" });
+    expect(row).toMatchObject({ type: "FINANCING", status: "NEW", name: "Zz Prueba", phone: "+56912345678", email: "zz@prueba.cl", page: "/financiamiento" });
     expect(row.details).toEqual({ vehiculo: "Peugeot Partner 2024", pie: "Sin pie" });
   });
 
   it("guarda seguro con patente y año", async () => {
-    const { id } = await createLead(db!, lead("seguro", { nombre: "Zz Prueba", telefono: "967546248", vehiculo: "Toyota Hilux", anio: "2020", patente: "bc-df-12" }), {
+    const { id } = await createLead(db!, lead("seguro", { nombre: "Zz Prueba", telefono: "967546248", email: "zz@prueba.cl", vehiculo: "Toyota Hilux", anio: "2020", patente: "bc-df-12" }), {
       ipHash: `${IP}-b`,
     });
     const row = await db!.lead.findUniqueOrThrow({ where: { id } });
@@ -48,7 +48,7 @@ describe.skipIf(!db)("solicitudes (base real, filas de prueba)", () => {
 
   it("limita envíos por visitante dentro de la ventana", async () => {
     const ipHash = `${IP}-c`;
-    const l = lead("financiamiento", { nombre: "Zz Prueba", telefono: "912345678" });
+    const l = lead("financiamiento", { nombre: "Zz Prueba", telefono: "912345678", email: "zz@prueba.cl" });
     for (let i = 0; i < LEAD_RATE_LIMIT.max; i++) {
       expect(await isRateLimited(db!, ipHash)).toBe(false);
       await createLead(db!, l, { ipHash });
