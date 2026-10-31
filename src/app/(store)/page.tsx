@@ -1,5 +1,6 @@
 import { Benefits } from "@/components/home/benefits";
 import { FeaturedVehicles } from "@/components/home/featured-vehicles";
+import { GoogleReviews } from "@/components/home/google-reviews";
 import { Hero } from "@/components/home/hero";
 import { SellBand } from "@/components/home/sell-band";
 import { VisitUs } from "@/components/home/visit-us";
@@ -12,6 +13,7 @@ export default async function HomePage() {
     <>
       <Hero />
       {featured.length > 0 ? <FeaturedVehicles vehicles={featured} /> : null}
+      <GoogleReviews />
       <Benefits />
       <SellBand />
       <VisitUs />
