@@ -16,7 +16,7 @@ export function SiteHeader() {
           <Logo className="w-36 sm:w-44" preload />
         </Link>
 
-        <nav aria-label="Principal" className="hidden items-center gap-8 lg:flex">
+        <nav aria-label="Principal" className="hidden items-center gap-6 lg:flex xl:gap-8">
           <Suspense fallback={<NavLinksStatic />}>
             <NavLinks />
           </Suspense>

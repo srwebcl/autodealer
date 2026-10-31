@@ -158,12 +158,20 @@ src/
 tests/unit/                 # Vitest
 ```
 
+## Formularios de financiamiento y seguros
+
+- Páginas `/financiamiento` (Autofin, Global, Unidad Crédito, entre otras) y `/seguros` (convenio directo con BCI Seguros), según lo informado por el cliente. Logos en `public/brand/partners/`.
+- Server Action `submitLead` (`src/server/leads/actions.ts`): validación con Zod en servidor (teléfono chileno normalizado a +56…, patente, año), campo trampa contra bots y máximo 5 envíos por hora por visitante (hash de IP, nunca la IP en claro).
+- Cada solicitud se guarda en la tabla `Lead` y el visitante puede enviar el resumen por WhatsApp. **No se envía email**: requiere un servicio de correo (pendiente de autorización).
+- Revisar solicitudes: `npm run leads:list -- --dias=7` (hasta que exista el panel de la Fase 4).
+- La ficha de cada vehículo enlaza a `/financiamiento?vehiculo=…` con el auto prellenado.
+
 ## Contenido provisional (revisar antes del lanzamiento)
 
 Ya no se marcan en pantalla (el cliente pidió quitar la etiqueta "Texto provisional"), pero siguen pendientes de aprobación:
 
 - Beneficios de la portada (`src/components/home/benefits.tsx`).
-- Textos de "Vende tu auto" y "Financiamiento".
+- Texto de "Vende tu auto". Los pasos de "Financiamiento" y "Seguros" describen el proceso (sin tasas, plazos ni coberturas).
 - Banda "¿Quieres vender o cambiar tu auto?".
 - Nota del footer "Precios … sujetos a confirmación".
 - Ícono del sitio (`src/app/icon.svg`), placeholder basado en las franjas del logo.

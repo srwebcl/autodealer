@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { mainNav } from "@/config/site";
 
 const linkBase =
-  "relative py-2 text-[0.8rem] font-semibold uppercase tracking-[0.14em] transition-colors after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:origin-left after:bg-brand-yellow after:transition-transform after:duration-300";
+  "relative py-2 text-[0.8rem] font-semibold uppercase whitespace-nowrap tracking-[0.1em] xl:tracking-[0.14em] transition-colors after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:origin-left after:bg-brand-yellow after:transition-transform after:duration-300";
 
 export function NavLinksStatic() {
   return (

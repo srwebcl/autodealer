@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Container } from "@/components/layout/container";
 import { JsonLd } from "@/components/seo/json-ld";
 import { buttonClasses } from "@/components/ui/button-link";
-import { ArrowRightIcon, ClockIcon, InstagramIcon, PhoneIcon, PinIcon, WhatsAppIcon } from "@/components/ui/icons";
+import { ArrowRightIcon, ClockIcon, InstagramIcon, PercentIcon, PhoneIcon, PinIcon, WhatsAppIcon } from "@/components/ui/icons";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { CommercialDescription } from "@/components/vehicles/commercial-description";
 import { StatusBadge } from "@/components/vehicles/status-badge";
@@ -151,6 +151,19 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[slu
                     </a>
                   ) : null}
                 </div>
+                {!sold ? (
+                  <Link
+                    href={`/financiamiento?vehiculo=${encodeURIComponent(name)}#formulario`}
+                    className="group flex items-center gap-3 rounded-sm border border-white/10 px-4 py-3 text-sm transition-colors hover:border-brand-yellow"
+                  >
+                    <PercentIcon width={18} height={18} className="shrink-0 text-brand-yellow" />
+                    <span className="flex-1">
+                      <span className="font-semibold text-chalk">Financiar este auto</span>
+                      <span className="block text-xs text-mist">Autofin, Global, Unidad Crédito y otras</span>
+                    </span>
+                    <ArrowRightIcon width={16} height={16} className="text-mist transition-colors group-hover:text-brand-yellow" />
+                  </Link>
+                ) : null}
               </div>
 
               {specs.length > 0 ? (

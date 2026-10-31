@@ -281,3 +281,35 @@ model IntegrationCredential {
   refreshFailures      Int       @default(0)
   updatedAt            DateTime  @updatedAt
 }
+
+enum LeadType {
+  FINANCING
+  INSURANCE
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  CLOSED
+}
+
+/// Solicitudes de los formularios públicos (financiamiento, seguros).
+/// Datos personales mínimos para responder; el panel (Fase 4) gestionará su estado.
+model Lead {
+  id        String     @id @default(uuid()) @db.Uuid
+  type      LeadType
+  status    LeadStatus @default(NEW)
+  name      String
+  phone     String
+  email     String?
+  /// Campos propios de cada formulario (vehículo, pie, patente, mensaje…).
+  details   Json
+  /// Página de origen (ruta), sin parámetros.
+  page      String?
+  /// Hash SHA-256 de la IP: límite de envíos sin guardar la IP en claro.
+  ipHash    String?
+  createdAt DateTime   @default(now())
+
+  @@index([type, createdAt(sort: Desc)])
+  @@index([ipHash, createdAt])
+}

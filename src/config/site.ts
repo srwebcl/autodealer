@@ -38,6 +38,7 @@ export const siteConfig = {
 export const mainNav = [
   { href: "/vehiculos", label: "Vehículos" },
   { href: "/financiamiento", label: "Financiamiento" },
+  { href: "/seguros", label: "Seguros" },
   { href: "/vende-tu-auto", label: "Vende tu auto" },
   { href: "/contacto", label: "Contacto" },
 ] as const;
