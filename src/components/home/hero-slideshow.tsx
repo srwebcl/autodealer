@@ -1,7 +1,7 @@
 "use client";
 
 import Image, { type StaticImageData } from "next/image";
-import { useEffect, useState } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
 
 export interface HeroSlide {
   src: StaticImageData;
@@ -55,7 +55,7 @@ export function HeroSlideshow({ slides }: { slides: HeroSlide[] }) {
   return (
     <>
       {/* Móvil: fotos en la mitad superior. Escritorio: a sangre completa. */}
-      <div aria-hidden className="absolute inset-x-0 top-0 -z-20 h-[58svh] overflow-hidden md:inset-0 md:h-auto">
+      <div aria-hidden className="hero-bg-in absolute inset-x-0 top-0 -z-20 h-[58svh] overflow-hidden md:inset-0 md:h-auto">
         {slides.map((slide, i) =>
           i === 0 || ready ? (
             <div
@@ -82,7 +82,7 @@ export function HeroSlideshow({ slides }: { slides: HeroSlide[] }) {
       </div>
 
       {count > 1 ? (
-        <div className="absolute top-21 right-3 z-10 flex items-center gap-2 sm:right-6 md:top-26 lg:right-10">
+        <div style={{ "--d": "1.6s" } as CSSProperties} className="hero-rise absolute top-21 right-3 z-10 flex items-center gap-2 sm:right-6 md:top-26 lg:right-10">
           <div className="flex items-center gap-1.5">
             {slides.map((slide, i) => (
               <button

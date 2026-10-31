@@ -130,6 +130,120 @@
   }
 }
 
+/* Hero: secuencia de entrada (solo CSS, al cargar). Fondo que se revela, barrido de franjas
+   de marca, titular palabra a palabra desde una máscara y el resto en cascada. */
+.hero-bg-in {
+  animation: hero-bg-in 2.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes hero-bg-in {
+  from {
+    transform: scale(1.14);
+    filter: brightness(0.25) saturate(0.6);
+  }
+  to {
+    transform: none;
+    filter: none;
+  }
+}
+.hero-sweep {
+  position: absolute;
+  inset: -10% auto -10% 0;
+  width: 42rem;
+  max-width: 90vw;
+  display: flex;
+  gap: 1.5rem;
+  transform: translateX(-120%) skewX(-20deg);
+  animation: hero-sweep 1.5s cubic-bezier(0.65, 0, 0.35, 1) 0.15s both;
+  pointer-events: none;
+}
+.hero-sweep span {
+  flex: none;
+  height: 100%;
+}
+@keyframes hero-sweep {
+  from {
+    transform: translateX(-120%) skewX(-20deg);
+  }
+  to {
+    transform: translateX(calc(100vw + 120%)) skewX(-20deg);
+  }
+}
+.hero-stripe-in {
+  transform-origin: left center;
+  animation: hero-stripe-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0s) both;
+}
+@keyframes hero-stripe-in {
+  from {
+    transform: skewX(-20deg) scaleX(0);
+  }
+  to {
+    transform: skewX(-20deg) scaleX(1);
+  }
+}
+.hero-word {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  /* Holgura para la cursiva: sin recortar las letras inclinadas. */
+  padding: 0 0.08em 0.06em;
+  margin: 0 -0.08em -0.06em;
+}
+.hero-word > span {
+  display: inline-block;
+  animation: hero-word 0.9s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0s) both;
+}
+@keyframes hero-word {
+  from {
+    transform: translateY(105%) skewY(6deg);
+  }
+  to {
+    transform: none;
+  }
+}
+.hero-rise {
+  animation: hero-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0s) both;
+}
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+/* Brillo que recorre "te espera." una vez, al terminar de entrar. */
+.hero-shine {
+  background: linear-gradient(100deg, var(--color-brand-yellow) 0 40%, #fffbe0 50%, var(--color-brand-yellow) 60% 100%) 100% 0 / 260% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: hero-shine 1.4s ease-in-out var(--d, 0s) both;
+}
+@keyframes hero-shine {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-bg-in,
+  .hero-stripe-in,
+  .hero-word > span,
+  .hero-rise,
+  .hero-shine {
+    animation: none !important;
+  }
+  .hero-sweep {
+    display: none;
+  }
+}
+
 /* Reseñas: cada burbuja "brota" desde su cola, una a una y cada vez más rápido (solo con JS armado). */
 .bubbles[data-armed] .bubble {
   opacity: 0;
