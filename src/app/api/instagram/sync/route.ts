@@ -26,7 +26,9 @@ async function handle(request: Request, trigger: "CRON" | "MANUAL") {
   if (result.status === "locked") {
     return Response.json({ status: "locked", message: "Ya hay una sincronización en curso" }, { status: 409 });
   }
-  if (result.changed) revalidateTag(VEHICLES_TAG, "max");
+  // Expira de inmediato (no stale-while-revalidate): con "max", rutas como el sitemap se
+  // regeneraban leyendo la caché interna aún antigua y quedaban desfasadas hasta 1 h.
+  if (result.changed) revalidateTag(VEHICLES_TAG, { expire: 0 });
 
   console.info("[instagram-sync]", trigger, result.status, JSON.stringify(result.stats));
   return Response.json(
