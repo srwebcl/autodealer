@@ -15,7 +15,7 @@ export function CatalogSearch({ form, defaultValue }: { form: string; defaultVal
         name="q"
         form={form}
         defaultValue={defaultValue}
-        placeholder="Buscar marca o modelo"
+        placeholder="Marca, modelo, tipo o presupuesto"
         aria-label="Buscar marca, modelo o versión"
         enterKeyHint="search"
         onKeyDown={(e) => {

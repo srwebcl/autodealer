@@ -55,7 +55,8 @@ export function HeroSlideshow({ slides }: { slides: HeroSlide[] }) {
   return (
     <>
       {/* Móvil: fotos en la mitad superior. Escritorio: a sangre completa. */}
-      <div aria-hidden className="hero-bg-in absolute inset-x-0 top-0 -z-20 h-[58svh] overflow-hidden md:inset-0 md:h-auto">
+      <div aria-hidden className="absolute inset-x-0 top-0 -z-20 h-[58svh] overflow-hidden md:inset-0 md:h-auto">
+        <div className="hero-bg-in absolute inset-0">
         {slides.map((slide, i) =>
           i === 0 || ready ? (
             <div
@@ -78,6 +79,7 @@ export function HeroSlideshow({ slides }: { slides: HeroSlide[] }) {
             </div>
           ) : null,
         )}
+        </div>
         <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-ink to-transparent md:hidden" />
       </div>
 

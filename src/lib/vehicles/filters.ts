@@ -119,10 +119,12 @@ export function publicVehicleBase(): Prisma.VehicleWhereInput {
 }
 
 /** Construye el WHERE de Prisma. Solo usa valores validados; Prisma parametriza la consulta. */
-export function buildVehicleWhere(f: CatalogFilters): Prisma.VehicleWhereInput {
+export function buildVehicleWhere(f: CatalogFilters, matchSlugs?: string[]): Prisma.VehicleWhereInput {
   const and: Prisma.VehicleWhereInput[] = [publicVehicleBase()];
 
-  if (f.q) {
+  // Con búsqueda inteligente (ver search.ts) el texto ya viene resuelto como lista de slugs.
+  if (f.q && matchSlugs) and.push({ slug: { in: matchSlugs } });
+  else if (f.q) {
     // Cada palabra debe aparecer en marca, modelo o versión.
     for (const word of f.q.split(/\s+/).filter(Boolean).slice(0, 5)) {
       and.push({

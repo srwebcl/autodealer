@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
+import { type CSSProperties, type ReactNode, Suspense } from "react";
 import { Container } from "@/components/layout/container";
 import { ButtonLink, buttonClasses } from "@/components/ui/button-link";
 import { ArrowRightIcon, PinIcon, WhatsAppIcon } from "@/components/ui/icons";
@@ -10,7 +10,8 @@ import ferrari458 from "../../../public/images/hero/ferrari-458.jpg";
 import ferrari488 from "../../../public/images/hero/ferrari-488.jpg";
 import mercedesCoupe from "../../../public/images/hero/mercedes-coupe.jpg";
 import { type HeroSlide, HeroSlideshow } from "./hero-slideshow";
-import { QuickSearch } from "./quick-search";
+import { getSearchIndex } from "@/server/vehicles/queries";
+import { SmartSearch } from "./smart-search";
 
 // Fotos de Unsplash (licencia Unsplash: uso comercial gratuito). Créditos en el README.
 const SLIDES: HeroSlide[] = [
@@ -32,11 +33,16 @@ function Word({ at, children }: { at: number; children: ReactNode }) {
   );
 }
 
+/** El índice sale de la caché del inventario; mientras carga, el buscador funciona como formulario. */
+async function HeroSearch() {
+  return <SmartSearch items={await getSearchIndex()} />;
+}
+
 export function Hero() {
   return (
     <section
       aria-labelledby="hero-title"
-      className="relative isolate flex min-h-[100svh] flex-col overflow-hidden bg-ink"
+      className="relative isolate z-10 flex min-h-[100svh] flex-col overflow-x-clip bg-ink"
     >
       <HeroSlideshow slides={SLIDES} />
       {/* Velos para legibilidad: lateral en escritorio, inferior en móvil. */}
@@ -49,10 +55,12 @@ export function Hero() {
         className="absolute inset-x-0 bottom-0 -z-10 hidden h-48 bg-gradient-to-t from-ink to-transparent md:block"
       />
       {/* Barrido de franjas de marca al cargar (una sola pasada). */}
-      <div aria-hidden className="hero-sweep -z-10">
-        <span className="w-24 bg-brand-yellow/85" />
-        <span className="w-10 bg-brand-red/85" />
-        <span className="w-3 bg-brand-yellow/70" />
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+        <div className="hero-sweep">
+          <span className="w-24 bg-brand-yellow/85" />
+          <span className="w-10 bg-brand-red/85" />
+          <span className="w-3 bg-brand-yellow/70" />
+        </div>
       </div>
 
       <Container className="flex flex-1 flex-col justify-end pt-[40svh] pb-10 md:justify-center md:pt-36 md:pb-14">
@@ -105,8 +113,10 @@ export function Hero() {
       </Container>
 
       <Container className="relative pb-10 md:pb-16">
-        <div className="hero-rise" style={delay(1.6)}>
-          <QuickSearch />
+        <div className="hero-rise relative z-20" style={delay(1.6)}>
+          <Suspense fallback={<SmartSearch items={null} />}>
+            <HeroSearch />
+          </Suspense>
         </div>
       </Container>
     </section>

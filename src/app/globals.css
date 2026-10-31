@@ -244,6 +244,28 @@
   }
 }
 
+/* "Por qué AutoDealer": las celdas suben en cascada al entrar en pantalla (donde el navegador
+   soporta animaciones ligadas al scroll; si no, se ven directamente). */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .benefit {
+      animation: benefit-in linear both;
+      animation-timeline: view();
+      animation-range: entry calc(var(--i, 0) * 6%) entry calc(55% + var(--i, 0) * 6%);
+    }
+  }
+}
+@keyframes benefit-in {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 /* Reseñas: cada burbuja "brota" desde su cola, una a una y cada vez más rápido (solo con JS armado). */
 .bubbles[data-armed] .bubble {
   opacity: 0;

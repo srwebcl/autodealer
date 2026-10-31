@@ -2,6 +2,7 @@ import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { db } from "@/lib/db";
 import type { CatalogFilters } from "@/lib/vehicles/filters";
+import { searchVehicles } from "@/lib/vehicles/search";
 import * as repo from "./repository";
 
 /** Etiqueta de caché del inventario. El panel y la sync la invalidan al cambiar datos. */
@@ -11,7 +12,16 @@ export async function getCatalogPage(filters: CatalogFilters) {
   "use cache";
   cacheTag(VEHICLES_TAG);
   cacheLife("hours");
-  return repo.listVehicles(db, filters);
+  // El texto libre se resuelve con la misma búsqueda inteligente del inicio.
+  const matchSlugs = filters.q ? searchVehicles(await getSearchIndex(), filters.q).results.map((v) => v.slug) : undefined;
+  return repo.listVehicles(db, filters, matchSlugs);
+}
+
+export async function getSearchIndex() {
+  "use cache";
+  cacheTag(VEHICLES_TAG);
+  cacheLife("hours");
+  return repo.listSearchIndex(db);
 }
 
 export async function getCatalogFacets() {

@@ -11,6 +11,7 @@ import {
 } from "@/lib/vehicles/filters";
 import { drivetrainLabels, fuelTypeLabels, transmissionLabels } from "@/lib/vehicles/labels";
 import type { CommercialContent } from "@/lib/instagram/commercial-content";
+import { buildSearchDoc, type SearchItem } from "@/lib/vehicles/search";
 import type { VehicleCardData, VehicleDetailData } from "@/types/vehicle";
 
 function asContent(value: unknown): CommercialContent | null {
@@ -63,8 +64,8 @@ export function toCard(row: CardRow): VehicleCardData {
   };
 }
 
-export async function listVehicles(db: Db, filters: CatalogFilters) {
-  const where = buildVehicleWhere(filters);
+export async function listVehicles(db: Db, filters: CatalogFilters, matchSlugs?: string[]) {
+  const where = buildVehicleWhere(filters, matchSlugs);
   const total = await db.vehicle.count({ where });
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const page = Math.min(filters.pagina, pageCount);
@@ -86,6 +87,37 @@ export async function listFeatured(db: Db, limit: number) {
     select: cardSelect,
   });
   return rows.map(toCard);
+}
+
+/** Índice compacto del catálogo público para la búsqueda inteligente (más recientes primero). */
+export async function listSearchIndex(db: Db): Promise<SearchItem[]> {
+  const rows = await db.vehicle.findMany({
+    where: publicVehicleBase(),
+    orderBy: buildVehicleOrderBy("recientes"),
+    select: { ...cardSelect, drivetrain: true, color: true, engine: true, description: true },
+  });
+  return rows.map((row) => {
+    const card = toCard(row);
+    return {
+      slug: card.slug,
+      make: card.make,
+      model: card.model,
+      version: card.version ?? null,
+      year: card.year ?? null,
+      priceClp: card.priceClp ?? null,
+      mileageKm: card.mileageKm ?? null,
+      fuelType: card.fuelType ?? null,
+      transmission: card.transmission ?? null,
+      status: card.status,
+      image: card.image ?? null,
+      doc: buildSearchDoc({
+        ...row,
+        fuelType: card.fuelType,
+        transmission: card.transmission,
+        drivetrain: row.drivetrain ? drivetrainLabels[row.drivetrain] : null,
+      }),
+    };
+  });
 }
 
 /** Opciones de filtro basadas solo en datos existentes del catálogo público. */
