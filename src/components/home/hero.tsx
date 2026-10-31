@@ -42,7 +42,7 @@ export function Hero() {
   return (
     <section
       aria-labelledby="hero-title"
-      className="relative isolate z-10 flex min-h-[100svh] flex-col overflow-x-clip bg-ink"
+      className="relative isolate z-10 flex flex-col overflow-x-clip bg-ink"
     >
       <HeroSlideshow slides={SLIDES} />
       {/* Velos para legibilidad: lateral en escritorio, inferior en móvil. */}
@@ -63,7 +63,7 @@ export function Hero() {
         </div>
       </div>
 
-      <Container className="flex flex-1 flex-col justify-end pt-[40svh] pb-10 md:justify-center md:pt-36 md:pb-14">
+      <Container className="flex flex-1 flex-col justify-end pt-[22svh] pb-6 md:flex-none md:pt-32 md:pb-10">
         <div className="max-w-2xl">
           <p className="eyebrow flex items-center gap-3">
             <span className="brand-stripe hero-stripe-in" style={delay(0.35)} aria-hidden />
@@ -112,7 +112,7 @@ export function Hero() {
         </div>
       </Container>
 
-      <Container className="relative pb-10 md:pb-16">
+      <Container className="relative pb-12">
         <div className="hero-rise relative z-20" style={delay(1.6)}>
           <Suspense fallback={<SmartSearch items={null} />}>
             <HeroSearch />

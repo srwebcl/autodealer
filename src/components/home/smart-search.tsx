@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { ArrowRightIcon, CloseIcon, SearchIcon, WhatsAppIcon } from "@/components/ui/icons";
 import { formatClp, formatKm } from "@/lib/utils/format";
 import { describeQuery, type SearchItem, searchVehicles } from "@/lib/vehicles/search";
@@ -13,6 +13,14 @@ const MAX_RESULTS = 5;
 
 // Ideas de búsqueda: solo se muestran las que encuentran algo en el inventario actual.
 const IDEAS = ["camioneta 4x4", "SUV", "automático", "diésel", "hatchback", "hasta 10 millones", "desde 2022", "furgón"];
+
+const WIDE = "(min-width: 40rem)";
+function subscribeWide(cb: () => void) {
+  const mq = window.matchMedia(WIDE);
+  mq.addEventListener("change", cb);
+  return () => mq.removeEventListener("change", cb);
+}
+const isWide = () => window.matchMedia(WIDE).matches;
 
 const catalogHref = (q: string) => `/vehiculos?q=${encodeURIComponent(q.trim())}`;
 
@@ -69,7 +77,10 @@ export function SmartSearch({ items }: { items: SearchItem[] | null }) {
     const id = window.setInterval(() => setTick((t) => t + 1), 2800);
     return () => window.clearInterval(id);
   }, [ideas.length, q]);
-  const placeholder = ideas.length ? `Prueba: "${ideas[tick % ideas.length]}"` : "Busca marca, modelo, tipo o presupuesto";
+  // En pantallas angostas solo la pregunta: el ejemplo no cabe.
+  const wide = useSyncExternalStore(subscribeWide, isWide, () => true);
+  const placeholder =
+    wide && ideas.length ? `¿Qué auto buscas? Por ejemplo: ${ideas[tick % ideas.length]}` : wide ? "¿Qué auto buscas? Marca, modelo o presupuesto" : "¿Qué auto buscas?";
 
   // El buscador está al pie del hero: al usarlo, sube la página lo justo para ver los resultados.
   function makeRoom() {
@@ -167,21 +178,6 @@ export function SmartSearch({ items }: { items: SearchItem[] | null }) {
         </button>
       </form>
 
-      {ideas.length ? (
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-          <span className="text-mist">Prueba:</span>
-          {ideas.map((idea) => (
-            <button
-              key={idea}
-              type="button"
-              onClick={() => pick(idea)}
-              className="rounded-full border border-white/12 bg-ink/50 px-3 py-1 text-chalk/85 backdrop-blur-sm transition-colors hover:border-brand-yellow hover:text-brand-yellow"
-            >
-              {idea}
-            </button>
-          ))}
-        </div>
-      ) : null}
 
       {showPanel ? (
         <div className="absolute inset-x-0 top-16 z-40 mt-2 overflow-hidden rounded-md border border-white/12 bg-graphite-900 shadow-[0_40px_80px_-30px_rgba(0,0,0,0.95)] sm:top-[4.5rem]">

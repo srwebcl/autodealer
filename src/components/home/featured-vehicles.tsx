@@ -7,7 +7,7 @@ import type { VehicleCardData } from "@/types/vehicle";
 
 export function FeaturedVehicles({ vehicles }: { vehicles: VehicleCardData[] }) {
   return (
-    <section aria-labelledby="featured-title" className="py-20 sm:py-28">
+    <section aria-labelledby="featured-title" className="pt-10 pb-20 sm:pt-14 sm:pb-28">
       <Container>
         <SectionHeading
           id="featured-title"
