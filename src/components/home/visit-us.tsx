@@ -106,45 +106,37 @@ export function VisitUs() {
           </div>
         </div>
 
-        {/* Horario y contacto en una ficha, con la franja de marca abajo. */}
-        <div className="relative self-start overflow-hidden rounded-md">
-          <div className="grid gap-10 self-start rounded-md border border-white/10 bg-graphite-900/70 p-7 shadow-[0_40px_90px_-40px_rgba(0,0,0,0.9)] sm:grid-cols-2 sm:p-9">
-            <div>
-              <h3 className="text-xs font-semibold tracking-[0.16em] text-mist uppercase">
-                Horario
-              </h3>
-              <div className="mt-2">
-                <WeekHours />
-              </div>
-            </div>
-            <div>
-              <h3 className="text-xs font-semibold tracking-[0.16em] text-mist uppercase">
-                Contacto
-              </h3>
-              <ul className="mt-3 space-y-3 text-sm">
-                {CONTACTS.map((c) => (
-                  <li key={c.href}>
-                    <a
-                      href={c.href}
-                      {...(c.external
-                        ? { target: "_blank", rel: "noopener noreferrer" }
-                        : {})}
-                      className="group flex items-center gap-3 font-medium break-all text-chalk/90 hover:text-brand-yellow"
-                    >
-                      <span className="grid size-9 shrink-0 place-items-center rounded-sm bg-white/[0.05] text-brand-yellow transition-colors group-hover:bg-brand-yellow group-hover:text-ink">
-                        {c.icon}
-                      </span>
-                      {c.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
+        {/* Horario y contacto, sin recuadro. */}
+        <div className="grid gap-10 sm:grid-cols-2 lg:gap-12">
+          <div>
+            <h3 className="mb-4 text-xs font-semibold tracking-[0.16em] text-mist uppercase">
+              Horario de atención
+            </h3>
+            <WeekHours />
           </div>
-          <span
-            aria-hidden
-            className="absolute inset-x-0 bottom-0 h-1 bg-[linear-gradient(90deg,var(--color-brand-yellow)_0_50%,var(--color-brand-red)_50%_100%)]"
-          />
+          <div>
+            <h3 className="mb-4 text-xs font-semibold tracking-[0.16em] text-mist uppercase">
+              Contacto
+            </h3>
+            <ul className="space-y-3 text-sm">
+              {CONTACTS.map((c) => (
+                <li key={c.href}>
+                  <a
+                    href={c.href}
+                    {...(c.external
+                      ? { target: "_blank", rel: "noopener noreferrer" }
+                      : {})}
+                    className="group flex items-center gap-3 font-medium break-all text-chalk/90 hover:text-brand-yellow"
+                  >
+                    <span className="grid size-9 shrink-0 place-items-center rounded-sm bg-white/[0.05] text-brand-yellow transition-colors group-hover:bg-brand-yellow group-hover:text-ink">
+                      {c.icon}
+                    </span>
+                    {c.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </Container>
     </section>
