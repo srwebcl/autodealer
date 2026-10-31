@@ -35,24 +35,26 @@ export function OpenStatus() {
   );
 }
 
-const WEEK = [1, 2, 3, 4, 5, 6, 0];
-const SHORT = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+// Horario agrupado como lo publica AutoDealer: "Lunes a viernes", "Sábado" y "Domingo".
+const GROUPS = [
+  ...siteConfig.schedule.map((slot, i) => ({ label: siteConfig.hours[i]?.days ?? "", days: slot.days as readonly number[], time: `${slot.open} – ${slot.close}` })),
+  { label: "Domingo", days: [0] as readonly number[], time: "Cerrado" },
+];
 
-/** Horario día por día con el día de hoy destacado. */
+/** Horario compacto; la fila de hoy queda resaltada. */
 export function WeekHours() {
   const clock = useClock();
   return (
-    <ul className="divide-y divide-white/6 text-sm">
-      {WEEK.map((d) => {
-        const slot = siteConfig.schedule.find((s) => (s.days as readonly number[]).includes(d));
-        const today = clock?.day === d;
+    <ul className="space-y-2 text-sm">
+      {GROUPS.map((g) => {
+        const today = clock !== null && g.days.includes(clock.day);
         return (
-          <li key={d} className={`flex items-center justify-between gap-4 py-2 ${today ? "text-chalk" : "text-mist"}`}>
+          <li key={g.label} className={`flex items-center justify-between gap-4 ${today ? "text-chalk" : "text-mist"}`}>
             <span className={`flex items-center gap-2 ${today ? "font-semibold" : ""}`}>
-              {SHORT[d]}
+              {g.label}
               {today ? <span className="rounded-sm bg-brand-yellow px-1.5 py-px text-[0.65rem] font-bold tracking-wider text-ink uppercase">Hoy</span> : null}
             </span>
-            <span className={`tabular-nums ${today ? "font-semibold" : ""}`}>{slot ? `${slot.open} – ${slot.close}` : "Cerrado"}</span>
+            <span className={`tabular-nums ${today ? "font-semibold" : ""}`}>{g.time}</span>
           </li>
         );
       })}
