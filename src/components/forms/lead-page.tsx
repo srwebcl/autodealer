@@ -29,17 +29,21 @@ export function Steps({ steps }: { steps: string[] }) {
 }
 
 /**
- * Página con información y formulario. Móvil: info → formulario → pasos.
- * Escritorio: info y pasos a la izquierda, formulario fijo a la derecha.
+ * Página con información y formulario.
+ * Móvil: info → formulario → pasos. Escritorio: la columna de información queda fija
+ * mientras el formulario (más largo) avanza con el scroll.
  */
 export function LeadPageLayout({ intro, form, after }: { intro: ReactNode; form: ReactNode; after: ReactNode }) {
   return (
-    <div className="grid items-start gap-x-16 gap-y-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,32rem)] lg:grid-rows-[auto_1fr]">
-      <div className="min-w-0 lg:col-start-1 lg:row-start-1">{intro}</div>
-      <div id="formulario" className="min-w-0 scroll-mt-24 rounded-md border border-white/10 bg-graphite-900 p-6 sm:p-8 lg:sticky lg:top-24 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+    <div className="grid items-start gap-x-16 gap-y-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,32rem)]">
+      {/* En móvil sus hijos se ordenan junto al formulario; en escritorio es una columna fija. */}
+      <div className="contents lg:sticky lg:top-26 lg:block lg:space-y-12">
+        <div className="order-1 min-w-0">{intro}</div>
+        <div className="order-3 min-w-0">{after}</div>
+      </div>
+      <div id="formulario" className="order-2 min-w-0 scroll-mt-24 rounded-md border border-white/10 bg-graphite-900 p-6 sm:p-8 lg:order-none">
         {form}
       </div>
-      <div className="min-w-0 lg:col-start-1 lg:row-start-2">{after}</div>
     </div>
   );
 }

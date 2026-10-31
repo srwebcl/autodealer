@@ -23,7 +23,7 @@ export default function ContactPage() {
 
       <Container className="py-14 sm:py-20">
         <div className="grid items-start gap-x-16 gap-y-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,32rem)]">
-          <section aria-labelledby="direct-title" className="min-w-0">
+          <section aria-labelledby="direct-title" className="min-w-0 lg:sticky lg:top-26">
             <SubHeading>
               <span id="direct-title">Respuesta inmediata</span>
             </SubHeading>

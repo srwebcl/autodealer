@@ -31,6 +31,12 @@ export const siteConfig = {
     { days: "Lunes a viernes", time: "08:30 a 18:30 hrs." },
     { days: "Sábado", time: "10:00 a 14:00 hrs." },
   ],
+  // confirmed: el mismo horario en formato estructurado (0 = domingo … 6 = sábado), para "Abierto ahora".
+  schedule: [
+    { days: [1, 2, 3, 4, 5], open: "08:30", close: "18:30" },
+    { days: [6], open: "10:00", close: "14:00" },
+  ],
+  timeZone: "America/Santiago",
   // confirmed: dirección con referencia, tal como la usa AutoDealer en sus publicaciones
   addressWithReference: "Av. Balmaceda 1595, esquina Huanhualí, frente a Iglesia de Lourdes, La Serena",
 } as const;
