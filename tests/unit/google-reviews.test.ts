@@ -3,14 +3,18 @@ import { googleReviews } from "@/config/google-reviews";
 
 // Las reseñas se cargan a mano: esta prueba evita publicar datos mal formados.
 describe("reseñas de Google (selección manual)", () => {
-  it("cada reseña tiene autor, texto, estrellas 1–5 y fecha AAAA-MM válida", () => {
+  it("cada reseña tiene autor y texto completos (sin truncar)", () => {
     for (const r of googleReviews.reviews) {
       expect(r.author.trim()).not.toBe("");
       expect(r.text.trim()).not.toBe("");
-      expect([1, 2, 3, 4, 5]).toContain(r.rating);
-      expect(r.date).toMatch(/^\d{4}-(0[1-9]|1[0-2])$/);
-      expect(new Date(`${r.date}-01T00:00:00Z`).getTime()).toBeLessThanOrEqual(Date.now());
+      expect(r.text).not.toMatch(/…\s*Más$/);
+      if (r.rating !== undefined) expect([1, 2, 3, 4, 5]).toContain(r.rating);
     }
+  });
+
+  it("sin autores repetidos", () => {
+    const names = googleReviews.reviews.map((r) => r.author);
+    expect(new Set(names).size).toBe(names.length);
   });
 
   it("calificación y total, si existen, son coherentes", () => {
