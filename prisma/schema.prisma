@@ -285,6 +285,8 @@ model IntegrationCredential {
 enum LeadType {
   FINANCING
   INSURANCE
+  SELL
+  CONTACT
 }
 
 enum LeadStatus {

@@ -8,6 +8,7 @@ import { formatChileanPhone } from "../src/lib/leads/schema";
 
 if (existsSync(".env.local")) process.loadEnvFile(".env.local");
 const db = createPrismaClient(process.env.DATABASE_URL ?? "");
+const TYPE_LABELS = { FINANCING: "Financiamiento", INSURANCE: "Seguro", SELL: "Vende su auto", CONTACT: "Contacto" } as const;
 const days = Number(process.argv.find((a) => a.startsWith("--dias="))?.slice(7) ?? 30);
 
 async function main() {
@@ -17,7 +18,7 @@ async function main() {
   console.table(
     leads.map((l) => ({
       fecha: l.createdAt.toLocaleString("es-CL", { timeZone: "America/Santiago" }),
-      tipo: l.type === "FINANCING" ? "Financiamiento" : "Seguro",
+      tipo: TYPE_LABELS[l.type],
       estado: l.status,
       nombre: l.name,
       telefono: formatChileanPhone(l.phone),

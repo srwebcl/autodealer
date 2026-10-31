@@ -1,0 +1,3 @@
+-- AlterEnum
+ALTER TYPE "LeadType" ADD VALUE 'SELL';
+ALTER TYPE "LeadType" ADD VALUE 'CONTACT';

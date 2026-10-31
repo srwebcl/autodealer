@@ -1,11 +1,13 @@
 import { z } from "zod";
 
 /** Tipo de formulario (valor del campo oculto "tipo") ↔ enum de la base. */
-export const LEAD_FORMS = { financiamiento: "FINANCING", seguro: "INSURANCE" } as const;
+export const LEAD_FORMS = { financiamiento: "FINANCING", seguro: "INSURANCE", vende: "SELL", contacto: "CONTACT" } as const;
 export type LeadForm = keyof typeof LEAD_FORMS;
 
 export const DOWN_PAYMENT_OPTIONS = ["Sin pie", "Hasta $2.000.000", "$2.000.000 a $5.000.000", "Más de $5.000.000"] as const;
 export const WORKER_OPTIONS = ["Dependiente", "Independiente", "Pensionado"] as const;
+export const SELL_MODE_OPTIONS = ["Dejarlo en consignación", "Parte de pago por otro auto", "Aún no lo sé"] as const;
+export const CONTACT_TOPIC_OPTIONS = ["Comprar un vehículo", "Vender o consignar mi auto", "Financiamiento", "Seguro", "Otro"] as const;
 
 /** "+56 9 1234 5678", "912345678", "56912345678" → "+56912345678". Solo móviles y fijos de 9 dígitos. */
 export function normalizeChileanPhone(raw: string): string | null {
@@ -59,37 +61,78 @@ const financing = base.extend({
 });
 
 const currentYear = new Date().getFullYear();
-const insurance = base.extend({
-  vehiculo: trimmed(120).min(2, "Indica la marca y el modelo"),
-  anio: z
+const year = (required: boolean) =>
+  z
     .string()
     .trim()
     .optional()
     .transform((v, ctx) => {
-      if (!v) return undefined;
+      if (!v) {
+        if (required) ctx.addIssue({ code: "custom", message: "Indica el año" });
+        return undefined;
+      }
       const n = Number(v);
       if (!Number.isInteger(n) || n < 1980 || n > currentYear + 1) {
         ctx.addIssue({ code: "custom", message: "Año no válido" });
         return undefined;
       }
       return n;
-    }),
-  patente: z
-    .string()
-    .trim()
-    .optional()
-    .transform((v, ctx) => {
-      if (!v) return undefined;
-      const plate = normalizePlate(v);
-      if (!plate) ctx.addIssue({ code: "custom", message: "Patente no válida (ej. BCDF12 o AB1234)" });
-      return plate ?? undefined;
-    }),
+    });
+const plate = z
+  .string()
+  .trim()
+  .optional()
+  .transform((v, ctx) => {
+    if (!v) return undefined;
+    const p = normalizePlate(v);
+    if (!p) ctx.addIssue({ code: "custom", message: "Patente no válida (ej. BCDF12 o AB1234)" });
+    return p ?? undefined;
+  });
+/** "85.000", "85000 km" → 85000. */
+const mileage = z
+  .string()
+  .trim()
+  .optional()
+  .transform((v, ctx) => {
+    if (!v) return undefined;
+    const digits = v.replace(/km/i, "").replace(/[.\s]/g, "");
+    const n = Number(digits);
+    if (!/^\d+$/.test(digits) || n > 2_000_000) {
+      ctx.addIssue({ code: "custom", message: "Kilometraje no válido (ej. 85.000)" });
+      return undefined;
+    }
+    return n;
+  });
+
+const insurance = base.extend({
+  vehiculo: trimmed(120).min(2, "Indica la marca y el modelo"),
+  anio: year(false),
+  patente: plate,
 });
 
-export const leadSchemas = { financiamiento: financing, seguro: insurance } as const;
+const sell = base.extend({
+  vehiculo: trimmed(120).min(2, "Indica la marca y el modelo"),
+  anio: year(true),
+  kilometraje: mileage,
+  patente: plate,
+  modalidad: z.enum(SELL_MODE_OPTIONS).optional().catch(undefined),
+});
+
+const contact = base.extend({
+  motivo: z.enum(CONTACT_TOPIC_OPTIONS).optional().catch(undefined),
+  mensaje: trimmed(1000).min(5, "Escribe tu mensaje"),
+});
+
+export const leadSchemas = { financiamiento: financing, seguro: insurance, vende: sell, contacto: contact } as const;
 export type FinancingLead = z.infer<typeof financing>;
 export type InsuranceLead = z.infer<typeof insurance>;
-export type ParsedLead = { form: "financiamiento"; data: FinancingLead } | { form: "seguro"; data: InsuranceLead };
+export type SellLead = z.infer<typeof sell>;
+export type ContactLead = z.infer<typeof contact>;
+export type ParsedLead =
+  | { form: "financiamiento"; data: FinancingLead }
+  | { form: "seguro"; data: InsuranceLead }
+  | { form: "vende"; data: SellLead }
+  | { form: "contacto"; data: ContactLead };
 
 export type LeadParseResult =
   | { ok: true; lead: ParsedLead }
@@ -111,24 +154,52 @@ export function parseLead(form: string, raw: Record<string, unknown>): LeadParse
   return { ok: true, lead: { form: f, data: r.data } as ParsedLead };
 }
 
+const km = (n: number) => `${n.toLocaleString("es-CL")} km`;
+
 /** Resumen para WhatsApp: el cliente puede enviarlo para una respuesta inmediata. */
 export function leadWhatsappMessage(lead: ParsedLead): string {
-  const d = lead.data;
-  const lines =
-    lead.form === "financiamiento"
-      ? [
-          "Hola AutoDealer, quiero cotizar financiamiento.",
-          `Nombre: ${d.nombre}`,
-          lead.data.vehiculo ? `Vehículo de interés: ${lead.data.vehiculo}` : null,
-          lead.data.pie ? `Pie disponible: ${lead.data.pie}` : null,
-          lead.data.trabajador ? `Trabajador: ${lead.data.trabajador}` : null,
-        ]
-      : [
-          "Hola AutoDealer, quiero cotizar un seguro automotriz con BCI Seguros.",
-          `Nombre: ${d.nombre}`,
-          `Vehículo: ${lead.data.vehiculo}${lead.data.anio ? ` ${lead.data.anio}` : ""}`,
-          lead.data.patente ? `Patente: ${lead.data.patente}` : null,
-        ];
-  if (d.mensaje) lines.push(`Comentario: ${d.mensaje}`);
+  let lines: (string | null)[];
+  switch (lead.form) {
+    case "financiamiento": {
+      const d = lead.data;
+      lines = [
+        "Hola AutoDealer, quiero cotizar financiamiento.",
+        `Nombre: ${d.nombre}`,
+        d.vehiculo ? `Vehículo de interés: ${d.vehiculo}` : null,
+        d.pie ? `Pie disponible: ${d.pie}` : null,
+        d.trabajador ? `Trabajador: ${d.trabajador}` : null,
+      ];
+      break;
+    }
+    case "seguro": {
+      const d = lead.data;
+      lines = [
+        "Hola AutoDealer, quiero cotizar un seguro automotriz con BCI Seguros.",
+        `Nombre: ${d.nombre}`,
+        `Vehículo: ${d.vehiculo}${d.anio ? ` ${d.anio}` : ""}`,
+        d.patente ? `Patente: ${d.patente}` : null,
+      ];
+      break;
+    }
+    case "vende": {
+      const d = lead.data;
+      lines = [
+        "Hola AutoDealer, quiero vender mi auto.",
+        `Nombre: ${d.nombre}`,
+        `Vehículo: ${d.vehiculo}${d.anio ? ` ${d.anio}` : ""}`,
+        d.kilometraje != null ? `Kilometraje: ${km(d.kilometraje)}` : null,
+        d.patente ? `Patente: ${d.patente}` : null,
+        d.modalidad ? `Modalidad: ${d.modalidad}` : null,
+      ];
+      break;
+    }
+    case "contacto": {
+      const d = lead.data;
+      lines = ["Hola AutoDealer.", `Nombre: ${d.nombre}`, d.motivo ? `Motivo: ${d.motivo}` : null];
+      break;
+    }
+  }
+  const mensaje = lead.data.mensaje;
+  if (mensaje) lines.push(lead.form === "contacto" ? mensaje : `Comentario: ${mensaje}`);
   return lines.filter(Boolean).join("\n");
 }

@@ -12,10 +12,10 @@ export type LeadFormState =
   | { status: "error"; message: string; fieldErrors: Record<string, string>; values: Record<string, string> }
   | { status: "success"; name: string; whatsappUrl: string };
 
-const ALLOWED_PAGES = new Set(["/financiamiento", "/seguros"]);
+const ALLOWED_PAGES = new Set(["/financiamiento", "/seguros", "/vende-tu-auto", "/contacto"]);
 
 /**
- * Formularios públicos de financiamiento y seguros. Sin autenticación (son de contacto):
+ * Formularios públicos (financiamiento, seguros, venta y contacto). Sin autenticación (son de contacto):
  * validación en servidor, campo trampa contra bots y límite de envíos por visitante.
  */
 export async function submitLead(_prev: LeadFormState, formData: FormData): Promise<LeadFormState> {

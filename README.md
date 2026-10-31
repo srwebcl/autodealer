@@ -158,7 +158,7 @@ src/
 tests/unit/                 # Vitest
 ```
 
-## Formularios de financiamiento y seguros
+## Formularios de contacto (financiamiento, seguros, vende tu auto y contacto)
 
 - Páginas `/financiamiento` (Autofin, Global, Unidad Crédito, entre otras) y `/seguros` (convenio directo con BCI Seguros), según lo informado por el cliente. Logos en `public/brand/partners/`.
 - Server Action `submitLead` (`src/server/leads/actions.ts`): validación con Zod en servidor (teléfono chileno normalizado a +56…, patente, año), campo trampa contra bots y máximo 5 envíos por hora por visitante (hash de IP, nunca la IP en claro).

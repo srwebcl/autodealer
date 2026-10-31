@@ -62,3 +62,39 @@ describe("mensaje de WhatsApp", () => {
     expect(msg).not.toContain("967546248"); // el teléfono no se repite: WhatsApp ya lo identifica
   });
 });
+
+describe("vende tu auto y contacto", () => {
+  it("vende exige vehículo y año; normaliza kilometraje y patente", () => {
+    expect(parseLead("vende", { nombre: "Luis", telefono: "967546248", vehiculo: "Kia Rio" })).toMatchObject({
+      ok: false,
+      fieldErrors: { anio: "Indica el año" },
+    });
+    const r = parseLead("vende", {
+      nombre: "Luis",
+      telefono: "967546248",
+      vehiculo: "Kia Rio",
+      anio: "2019",
+      kilometraje: "85.000 km",
+      patente: "ab-cd-12",
+      modalidad: "Dejarlo en consignación",
+    });
+    expect(r).toMatchObject({ ok: true, lead: { data: { anio: 2019, kilometraje: 85000, patente: "ABCD12", modalidad: "Dejarlo en consignación" } } });
+    if (!r.ok) throw new Error("debió validar");
+    expect(leadWhatsappMessage(r.lead)).toContain("Kilometraje: 85.000 km");
+  });
+
+  it("kilometraje no numérico", () => {
+    expect(parseLead("vende", { nombre: "Luis", telefono: "967546248", vehiculo: "Kia", anio: "2019", kilometraje: "mucho" })).toMatchObject({
+      ok: false,
+      fieldErrors: { kilometraje: expect.any(String) },
+    });
+  });
+
+  it("contacto exige mensaje; motivo desconocido se descarta", () => {
+    expect(parseLead("contacto", { nombre: "Ana", telefono: "967546248", mensaje: "" })).toMatchObject({ ok: false, fieldErrors: { mensaje: expect.any(String) } });
+    const r = parseLead("contacto", { nombre: "Ana", telefono: "967546248", motivo: "otra cosa", mensaje: "¿Tienen camionetas 4x4?" });
+    expect(r).toEqual({ ok: true, lead: { form: "contacto", data: { nombre: "Ana", telefono: "+56967546248", mensaje: "¿Tienen camionetas 4x4?" } } });
+    if (!r.ok) throw new Error("debió validar");
+    expect(leadWhatsappMessage(r.lead)).toBe("Hola AutoDealer.\nNombre: Ana\n¿Tienen camionetas 4x4?");
+  });
+});
