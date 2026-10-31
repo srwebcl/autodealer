@@ -1,18 +1,19 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import { Container } from "@/components/layout/container";
-import { PageHero } from "@/components/layout/page-hero";
+import { SlidersIcon, SortIcon } from "@/components/ui/icons";
 import { ActiveFilters } from "@/components/vehicles/active-filters";
 import { AutoSubmitSelect } from "@/components/vehicles/auto-submit-select";
 import { CatalogEmpty } from "@/components/vehicles/catalog-empty";
-import { CatalogFiltersForm, FILTERS_FORM_ID } from "@/components/vehicles/catalog-filters";
+import { CatalogFiltersForm, FILTERS_FORM_ID, FILTERS_SHEET_ID } from "@/components/vehicles/catalog-filters";
+import { CatalogSearch } from "@/components/vehicles/catalog-search";
 import { CatalogSkeleton } from "@/components/vehicles/catalog-skeleton";
-import { FiltersDisclosure } from "@/components/vehicles/filters-disclosure";
-import { selectClass } from "@/components/vehicles/form-styles";
 import { Pagination } from "@/components/vehicles/pagination";
 import { VehicleGrid } from "@/components/vehicles/vehicle-grid";
 import { siteConfig } from "@/config/site";
-import { countActiveFilters, filtersToSearch, parseCatalogFilters, SORT_OPTIONS } from "@/lib/vehicles/filters";
+import { type CatalogFilters, countActiveFilters, filtersToSearch, parseCatalogFilters, SORT_OPTIONS } from "@/lib/vehicles/filters";
+import type { CatalogFacets } from "@/server/vehicles/repository";
 import { getCatalogFacets, getCatalogPage } from "@/server/vehicles/queries";
 
 export async function generateMetadata({ searchParams }: PageProps<"/vehiculos">): Promise<Metadata> {
@@ -27,41 +28,71 @@ export async function generateMetadata({ searchParams }: PageProps<"/vehiculos">
   };
 }
 
+const chipClass = (active: boolean) =>
+  `inline-flex h-9 shrink-0 items-center gap-1.5 rounded-sm border px-3 text-sm whitespace-nowrap transition-colors ${
+    active ? "border-brand-yellow bg-brand-yellow/10 text-brand-yellow" : "border-white/10 text-chalk/75 hover:border-white/30 hover:text-chalk"
+  }`;
+
+/** Acceso directo por marca: enlaces (funcionan sin JS) que conservan el resto de filtros. */
+function MakeShortcuts({ filters, makes }: { filters: CatalogFilters; makes: CatalogFacets["makes"] }) {
+  if (makes.length < 2) return null;
+  const href = (marca?: string) => `/vehiculos${filtersToSearch({ ...filters, marca, pagina: 1 })}`;
+  return (
+    <nav aria-label="Filtrar por marca" className="scroll-row -mx-5 mt-3 flex gap-2 overflow-x-auto px-5 sm:-mx-8 sm:px-8">
+      <Link href={href(undefined)} scroll={false} className={chipClass(!filters.marca)} aria-current={!filters.marca ? "true" : undefined}>
+        Todas
+      </Link>
+      {makes.map((m) => {
+        const active = filters.marca === m.value;
+        return (
+          <Link key={m.value} href={href(active ? undefined : m.value)} scroll={false} className={chipClass(active)} aria-current={active ? "true" : undefined}>
+            {m.value}
+            <span className="text-xs tabular-nums opacity-55">{m.count}</span>
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
 async function Catalog({ searchParams }: Pick<PageProps<"/vehiculos">, "searchParams">) {
   const filters = parseCatalogFilters(await searchParams);
   const [result, facets] = await Promise.all([getCatalogPage(filters), getCatalogFacets()]);
   const activeCount = countActiveFilters(filters);
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[17rem_1fr] lg:gap-10">
-      <aside aria-label="Filtros">
-        <div className="lg:sticky lg:top-24">
-          <FiltersDisclosure activeCount={activeCount}>
-            {/* key: remonta el formulario cuando cambian los filtros (defaultValue no se actualiza solo). */}
-            <CatalogFiltersForm key={filtersToSearch(filters)} filters={filters} facets={facets} />
-          </FiltersDisclosure>
-        </div>
-      </aside>
-
-      <div className="min-w-0">
-
-        <div className="flex flex-col gap-4 border-b border-white/8 pb-5 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-mist" aria-live="polite">
-            <strong className="font-semibold text-chalk">{result.total}</strong>{" "}
-            {result.total === 1 ? "vehículo" : "vehículos"}
-            {result.pageCount > 1 ? ` · página ${result.page} de ${result.pageCount}` : null}
+    <>
+      {/* Barra fija bajo la cabecera: el catálogo queda a la vista y los controles a mano. */}
+      <div className="sticky top-18 z-20 -mx-5 bg-ink/90 px-5 pt-3 pb-3 backdrop-blur-lg sm:-mx-8 sm:px-8">
+        <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-1 lg:max-w-md">
+            <CatalogSearch key={filters.q ?? ""} form={FILTERS_FORM_ID} defaultValue={filters.q} />
+          </div>
+          <p className="ml-auto hidden text-sm text-mist lg:block" aria-live="polite">
+            <strong className="font-semibold text-chalk tabular-nums">{result.total}</strong> {result.total === 1 ? "vehículo" : "vehículos"}
           </p>
-          <div className="flex items-center gap-3">
-            <label htmlFor="orden" className="text-xs font-semibold uppercase tracking-[0.14em] text-mist">
-              Ordenar
-            </label>
+          <button
+            type="button"
+            popoverTarget={FILTERS_SHEET_ID}
+            className="relative inline-flex h-11 shrink-0 items-center gap-2 rounded-sm border border-white/10 bg-graphite-900 px-3 text-sm font-semibold text-chalk transition-colors hover:border-white/30 sm:px-4 lg:ml-4"
+          >
+            <SlidersIcon width={18} height={18} />
+            <span className="max-sm:sr-only">Filtros</span>
+            {activeCount > 0 ? (
+              <span className="grid size-5 place-items-center rounded-full bg-brand-yellow text-[0.7rem] font-bold text-ink tabular-nums max-sm:absolute max-sm:-top-1.5 max-sm:-right-1.5">
+                {activeCount}
+              </span>
+            ) : null}
+          </button>
+          <label className="relative shrink-0">
+            <span className="sr-only">Ordenar por</span>
+            <SortIcon width={18} height={18} className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-chalk sm:hidden" />
             <AutoSubmitSelect
-              id="orden"
               name="orden"
               form={FILTERS_FORM_ID}
               key={filters.orden}
               defaultValue={filters.orden}
-              className={`${selectClass} w-52`}
+              className="select-chevron select-chevron-sm h-11 w-11 cursor-pointer appearance-none rounded-sm border border-white/10 bg-graphite-900 text-sm text-transparent transition-colors hover:border-white/30 focus:border-brand-yellow focus:outline-none sm:w-auto sm:min-w-48 sm:pr-9 sm:pl-3.5 sm:text-chalk [&>option]:bg-graphite-900 [&>option]:text-chalk"
             >
               {Object.entries(SORT_OPTIONS).map(([value, text]) => (
                 <option key={value} value={value}>
@@ -69,49 +100,47 @@ async function Catalog({ searchParams }: Pick<PageProps<"/vehiculos">, "searchPa
                 </option>
               ))}
             </AutoSubmitSelect>
-          </div>
+          </label>
         </div>
-
-        {activeCount > 0 ? (
-          <div className="mt-5">
-            <ActiveFilters filters={filters} />
-          </div>
-        ) : null}
-
-        <div className="mt-6">
-          {result.vehicles.length > 0 ? (
-            <VehicleGrid vehicles={result.vehicles} headingLevel={2} />
-          ) : (
-            <CatalogEmpty filtered={activeCount > 0} />
-          )}
-        </div>
-
-        <div className="mt-12">
-          <Pagination filters={filters} page={result.page} pageCount={result.pageCount} />
-        </div>
+        <MakeShortcuts filters={filters} makes={facets.makes} />
       </div>
-    </div>
+
+      {/* Panel lateral con todos los filtros (popover nativo). key: se reinicia y cierra al cambiar los filtros. */}
+      <div id={FILTERS_SHEET_ID} key={filtersToSearch(filters)} popover="auto" aria-label="Filtros" className="sheet">
+        <CatalogFiltersForm filters={filters} facets={facets} />
+      </div>
+
+      <div className={`mt-3 min-h-9 flex-wrap items-center gap-x-4 gap-y-2 ${activeCount > 0 ? "flex" : "flex lg:hidden"}`}>
+        <p className="text-sm text-mist lg:hidden" aria-live="polite">
+          <strong className="font-semibold text-chalk tabular-nums">{result.total}</strong> {result.total === 1 ? "vehículo" : "vehículos"}
+        </p>
+        {activeCount > 0 ? <ActiveFilters filters={filters} /> : null}
+      </div>
+
+      <div className="mt-3">
+        {result.vehicles.length > 0 ? (
+          <VehicleGrid vehicles={result.vehicles} headingLevel={2} dense />
+        ) : (
+          <CatalogEmpty filtered={activeCount > 0} />
+        )}
+      </div>
+
+      <div className="mt-12">
+        <Pagination filters={filters} page={result.page} pageCount={result.pageCount} />
+      </div>
+    </>
   );
 }
 
 export default function VehiclesPage({ searchParams }: PageProps<"/vehiculos">) {
   return (
-    <>
-      <PageHero
-        eyebrow="Catálogo"
-        title={
-          <>
-            Vehículos <span className="text-brand-yellow">disponibles</span>
-          </>
-        }
-      >
-        <p>Todas las unidades publicadas, con precio y datos clave. Consulta por WhatsApp para coordinar una visita.</p>
-      </PageHero>
-      <Container className="py-12 sm:py-16">
-        <Suspense fallback={<CatalogSkeleton />}>
-          <Catalog searchParams={searchParams} />
-        </Suspense>
-      </Container>
-    </>
+    <Container className="pt-24 pb-16 sm:pt-28">
+      <h1 className="font-display text-[2.1rem] leading-none font-extrabold uppercase italic tracking-tight sm:text-5xl">
+        Vehículos <span className="text-brand-yellow">disponibles</span>
+      </h1>
+      <Suspense fallback={<CatalogSkeleton />}>
+        <Catalog searchParams={searchParams} />
+      </Suspense>
+    </Container>
   );
 }

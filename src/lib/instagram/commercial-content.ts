@@ -73,7 +73,8 @@ function classify(heading: string): Kind {
 function toItem(line: string): ContentItem {
   const { icon, rest } = splitIcon(line);
   const m = rest.match(/^([^:]{2,60}):\s+(.+)$/);
-  if (m && !/https?$/i.test(m[1])) return { ...(icon ? { icon } : {}), title: m[1].trim(), text: m[2].trim() };
+  // "(Vs. 0 km: …)" es una nota, no un "Título: texto".
+  if (m && !/https?$/i.test(m[1]) && !rest.startsWith("(")) return { ...(icon ? { icon } : {}), title: m[1].trim(), text: m[2].trim() };
   return { ...(icon ? { icon } : {}), text: rest };
 }
 
@@ -175,4 +176,14 @@ export function plainDescription(c: CommercialContent): string | undefined {
 /** Ítems de equipamiento como lista corta (títulos o textos), sin inventar nada. */
 export function featureList(c: CommercialContent): string[] {
   return (c.equipment?.items ?? []).map((it) => (it.title ?? it.text).slice(0, 80)).slice(0, 40);
+}
+
+/**
+ * Datos clave del caption que no tienen campo propio en la ficha (Dueños, Condición, Garantía…).
+ * Modelo, año, km, motor, transmisión, combustible, tracción, color y precio ya se muestran
+ * desde los campos estructurados: repetirlos duplicaría información.
+ */
+const STRUCTURED_LABEL = /^(modelo|marca|versi[oó]n|a[nñ]o|kilometraje|km|motor|transmisi[oó]n|caja|combustible|tracci[oó]n|color|precio|valor)\b/i;
+export function extraKeyData(c: CommercialContent): { label: string; value: string }[] {
+  return c.keyData.filter((d) => !STRUCTURED_LABEL.test(d.label.trim()));
 }

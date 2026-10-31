@@ -4,13 +4,14 @@ import { notFound } from "next/navigation";
 import { Container } from "@/components/layout/container";
 import { JsonLd } from "@/components/seo/json-ld";
 import { buttonClasses } from "@/components/ui/button-link";
-import { InstagramIcon, PhoneIcon, WhatsAppIcon } from "@/components/ui/icons";
+import { ArrowRightIcon, ClockIcon, InstagramIcon, PhoneIcon, PinIcon, WhatsAppIcon } from "@/components/ui/icons";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { CommercialDescription } from "@/components/vehicles/commercial-description";
 import { StatusBadge } from "@/components/vehicles/status-badge";
 import { VehicleGallery } from "@/components/vehicles/vehicle-gallery";
 import { VehicleGrid } from "@/components/vehicles/vehicle-grid";
 import { siteConfig } from "@/config/site";
+import { extraKeyData } from "@/lib/instagram/commercial-content";
 import { absoluteUrl } from "@/lib/seo/urls";
 import { vehicleDisplayName, vehicleJsonLd, vehicleMetaDescription } from "@/lib/seo/vehicle";
 import { formatClp, formatKm } from "@/lib/utils/format";
@@ -49,15 +50,7 @@ export async function generateMetadata({ params }: PageProps<"/vehiculos/[slug]"
   };
 }
 
-function Spec({ label, value }: { label: string; value: string | null | undefined }) {
-  if (!value) return null;
-  return (
-    <div className="flex items-baseline justify-between gap-4 border-b border-white/8 py-3 sm:block sm:border-0 sm:py-0">
-      <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-mist">{label}</dt>
-      <dd className="text-right font-medium sm:mt-1 sm:text-left sm:text-lg">{value}</dd>
-    </div>
-  );
-}
+const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(siteConfig.addressWithReference)}`;
 
 export default async function VehiclePage({ params }: PageProps<"/vehiculos/[slug]">) {
   // params se espera fuera de Suspense: un slug inexistente responde 404 real.
@@ -76,27 +69,41 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[slu
       : vehicleWhatsappMessage({ ...v, url }),
   );
 
+  // Una sola lista de datos: campos estructurados + datos del caption sin campo propio.
+  const specs = [
+    { label: "Año", value: v.year ? String(v.year) : null },
+    { label: "Kilometraje", value: formatKm(v.mileageKm) },
+    { label: "Transmisión", value: v.transmission },
+    { label: "Combustible", value: v.fuelType },
+    { label: "Motor", value: v.engine },
+    { label: "Tracción", value: v.drivetrain },
+    { label: "Color", value: v.color },
+    ...(v.content ? extraKeyData(v.content) : []),
+  ].filter((s): s is { label: string; value: string } => Boolean(s.value));
+
+  const priceNode = sold ? <span className="text-chalk/45 line-through">{price ?? "Vendido"}</span> : (price ?? "Consultar precio");
+
   return (
     <>
       <JsonLd data={vehicleJsonLd(v, url)} />
 
-      <Container className="pt-28 pb-16 sm:pt-32">
-        <nav aria-label="Ruta de navegación" className="mb-6 text-sm text-mist">
+      <Container className="pt-20 pb-28 sm:pt-28 lg:pb-20">
+        <nav aria-label="Ruta de navegación" className="mb-4 text-sm text-mist max-sm:hidden">
           <ol className="flex flex-wrap items-center gap-2">
-            <li>
-              <Link href="/" className="hover:text-chalk">
-                Inicio
-              </Link>
-            </li>
-            <li aria-hidden>/</li>
             <li>
               <Link href="/vehiculos" className="hover:text-chalk">
                 Vehículos
               </Link>
             </li>
             <li aria-hidden>/</li>
+            <li>
+              <Link href={`/vehiculos?marca=${encodeURIComponent(v.make)}`} className="hover:text-chalk">
+                {v.make}
+              </Link>
+            </li>
+            <li aria-hidden>/</li>
             <li aria-current="page" className="text-chalk/80">
-              {v.make} {v.model}
+              {v.model}
             </li>
           </ol>
         </nav>
@@ -107,126 +114,117 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[slu
           </p>
         ) : null}
 
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,1.25fr)_minmax(20rem,1fr)] lg:gap-12">
-          <VehicleGallery images={v.images} title={name} />
+        <div className="grid gap-x-12 gap-y-8 lg:grid-cols-[minmax(0,1fr)_23rem] xl:grid-cols-[minmax(0,1fr)_26rem]">
+          <div className="min-w-0 lg:col-start-1 lg:row-start-1 lg:max-w-[calc(100svh-13rem)]">
+            <VehicleGallery images={v.images} title={name} />
+          </div>
 
-          <div>
+          {/* Panel de decisión: acompaña la lectura en escritorio. */}
+          <aside aria-label="Resumen y contacto" className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1">
             <div className="lg:sticky lg:top-24">
-              <div className="flex flex-wrap items-center gap-3">
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-mist">{v.make}</p>
+              <div className="flex items-center gap-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-mist">
+                  {v.make}
+                  {v.year ? ` · ${v.year}` : null}
+                </p>
                 <StatusBadge status={v.status} />
               </div>
-              <h1 className="mt-2 font-display text-5xl leading-[0.92] font-extrabold uppercase italic tracking-tight text-balance">
+              <h1 className="mt-1.5 font-display text-[2.6rem] leading-[0.95] font-extrabold uppercase italic tracking-tight text-balance">
                 {v.model}
               </h1>
-              {v.version ? <p className="mt-2 text-lg text-chalk/80">{v.version}</p> : null}
+              {v.version ? <p className="mt-1.5 text-chalk/70">{v.version}</p> : null}
 
-              <p className="mt-4 flex flex-wrap gap-x-3 text-sm text-mist">
-                {[v.year, formatKm(v.mileageKm), v.transmission, v.fuelType].filter(Boolean).map((x, i) => (
-                  <span key={i} className="after:ml-3 after:content-['·'] last:after:content-none">
-                    {x}
-                  </span>
-                ))}
-              </p>
+              <p className="mt-5 font-display text-[2.6rem] leading-none font-bold tracking-tight">{priceNode}</p>
+              {!sold && price ? <p className="mt-1.5 text-xs text-mist">Precio en CLP · confirma disponibilidad antes de tu visita</p> : null}
 
-              <div className="mt-6 rounded-md border border-white/10 bg-graphite-900 p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-mist">Precio</p>
-                <p className="mt-1 font-display text-5xl leading-none font-bold tracking-tight">
-                  {sold ? (
-                    <span className="text-chalk/50 line-through">{price ?? "Vendido"}</span>
-                  ) : (
-                    (price ?? "Consultar")
-                  )}
-                </p>
-                <div className="mt-5 flex flex-col gap-3">
-                  <a
-                    href={waHref}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={buttonClasses(
-                      "whatsapp",
-                      "lg",
-                      "w-full whitespace-nowrap px-4 text-[0.82rem] tracking-[0.04em] sm:text-[0.95rem] sm:tracking-[0.08em]",
-                    )}
-                  >
-                    <WhatsAppIcon className="shrink-0" /> {sold ? "Buscar uno similar" : "Consultar por WhatsApp"}
+              <div className="mt-6 flex flex-col gap-2.5">
+                <a href={waHref} target="_blank" rel="noopener noreferrer" className={buttonClasses("whatsapp", "lg", "w-full whitespace-nowrap px-4 text-[0.85rem] tracking-[0.06em]")}>
+                  <WhatsAppIcon className="shrink-0" /> {sold ? "Buscar uno similar" : "Consultar por WhatsApp"}
+                </a>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <a href={`tel:${siteConfig.phoneE164}`} className={buttonClasses("outline", "md", "w-full px-3")}>
+                    <PhoneIcon width={18} height={18} /> Llamar
                   </a>
-                  <a href={`tel:${siteConfig.phoneE164}`} className={buttonClasses("outline", "lg", "w-full")}>
-                    <PhoneIcon /> Llamar
-                  </a>
+                  {v.instagramPermalink ? (
+                    <a href={v.instagramPermalink} target="_blank" rel="noopener noreferrer" className={buttonClasses("outline", "md", "w-full px-3")}>
+                      <InstagramIcon width={18} height={18} /> Instagram
+                    </a>
+                  ) : null}
                 </div>
-                {v.instagramPermalink ? (
-                  <a
-                    href={v.instagramPermalink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-4 inline-flex items-center gap-2 text-sm text-mist hover:text-chalk"
-                  >
-                    <InstagramIcon width={18} height={18} /> Ver publicación original en Instagram
-                  </a>
+              </div>
+
+              {specs.length > 0 ? (
+                <dl className="mt-7 divide-y divide-white/8 border-y border-white/8 text-sm">
+                  {specs.map((s) => (
+                    <div key={s.label} className="flex items-baseline justify-between gap-6 py-2.5">
+                      <dt className="shrink-0 text-mist">{s.label}</dt>
+                      <dd className="text-right font-medium text-chalk">{s.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : null}
+
+              <div className="mt-6 space-y-3 text-sm">
+                <p className="flex gap-3 text-chalk/80">
+                  <PinIcon width={18} height={18} className="mt-0.5 shrink-0 text-brand-yellow" />
+                  <span>
+                    {siteConfig.addressWithReference}
+                    <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="ml-2 inline-flex items-center gap-1 font-semibold whitespace-nowrap text-chalk hover:text-brand-yellow">
+                      Cómo llegar <ArrowRightIcon width={13} height={13} />
+                    </a>
+                  </span>
+                </p>
+                <div className="flex gap-3 text-chalk/80">
+                  <ClockIcon width={18} height={18} className="mt-0.5 shrink-0 text-brand-yellow" />
+                  <dl>
+                    {siteConfig.hours.map((h) => (
+                      <div key={h.days} className="flex gap-1.5">
+                        <dt>{h.days}:</dt>
+                        <dd className="text-chalk">{h.time}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          <div className="min-w-0 lg:col-start-1 lg:row-start-2 lg:max-w-[max(calc(100svh-13rem),44rem)] lg:pt-6">
+            {v.content ? (
+              <CommercialDescription content={v.content} />
+            ) : (
+              <div className="space-y-10">
+                {v.description ? (
+                  <section aria-labelledby="desc-title">
+                    <h2 id="desc-title" className="font-display text-2xl font-bold uppercase italic">
+                      Descripción
+                    </h2>
+                    <p className="mt-4 max-w-[68ch] leading-relaxed whitespace-pre-line text-chalk/80">{v.description}</p>
+                  </section>
+                ) : null}
+                {v.features.length > 0 ? (
+                  <section aria-labelledby="features-title">
+                    <h2 id="features-title" className="font-display text-2xl font-bold uppercase italic">
+                      Equipamiento
+                    </h2>
+                    <ul className="mt-4 grid border-b border-white/8 md:grid-cols-2 md:gap-x-10">
+                      {v.features.map((f) => (
+                        <li key={f} className="flex items-start gap-3 border-t border-white/8 py-3 text-chalk/80">
+                          <span aria-hidden className="mt-2.5 h-0.5 w-3 shrink-0 -skew-x-[20deg] bg-brand-yellow" />
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
                 ) : null}
               </div>
-              <p className="mt-4 text-xs text-mist">Precio en CLP. Confirma disponibilidad antes de tu visita.</p>
-            </div>
+            )}
           </div>
         </div>
-
-        {v.content ? (
-          <div className="mt-16 max-w-5xl">
-            <CommercialDescription content={v.content} whatsappHref={waHref} />
-          </div>
-        ) : (
-          <div className="mt-16 grid gap-12 lg:grid-cols-[minmax(0,1.6fr)_minmax(20rem,1fr)] lg:gap-12">
-            <div className="space-y-12">
-              <section aria-labelledby="specs-title">
-                <h2 id="specs-title" className="font-display text-3xl font-extrabold uppercase italic">
-                  Ficha técnica
-                </h2>
-                <dl className="mt-6 grid gap-x-8 sm:grid-cols-3 sm:gap-y-6">
-                  <Spec label="Marca" value={v.make} />
-                  <Spec label="Modelo" value={v.model} />
-                  <Spec label="Versión" value={v.version} />
-                  <Spec label="Año" value={v.year ? String(v.year) : null} />
-                  <Spec label="Kilometraje" value={formatKm(v.mileageKm)} />
-                  <Spec label="Motor" value={v.engine} />
-                  <Spec label="Combustible" value={v.fuelType} />
-                  <Spec label="Transmisión" value={v.transmission} />
-                  <Spec label="Tracción" value={v.drivetrain} />
-                  <Spec label="Color" value={v.color} />
-                </dl>
-              </section>
-
-              {v.description ? (
-                <section aria-labelledby="desc-title">
-                  <h2 id="desc-title" className="font-display text-3xl font-extrabold uppercase italic">
-                    Descripción
-                  </h2>
-                  <p className="mt-4 leading-relaxed whitespace-pre-line text-chalk/85">{v.description}</p>
-                </section>
-              ) : null}
-
-              {v.features.length > 0 ? (
-                <section aria-labelledby="features-title">
-                  <h2 id="features-title" className="font-display text-3xl font-extrabold uppercase italic">
-                    Equipamiento
-                  </h2>
-                  <ul className="mt-5 grid gap-x-6 gap-y-3 sm:grid-cols-2">
-                    {v.features.map((f) => (
-                      <li key={f} className="flex items-start gap-3 text-chalk/85">
-                        <span aria-hidden className="mt-2 h-1 w-3 shrink-0 -skew-x-[20deg] bg-brand-yellow" />
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              ) : null}
-            </div>
-          </div>
-        )}
       </Container>
 
       {related.length > 0 ? (
-        <section aria-labelledby="related-title" className="border-t border-white/8 bg-graphite-950 py-16 sm:py-20">
+        <section aria-labelledby="related-title" className="border-t border-white/8 bg-graphite-950 py-14 sm:py-20">
           <Container>
             <SectionHeading id="related-title" eyebrow="Sigue mirando" title="También te puede interesar" />
             <div className="mt-8">
@@ -235,6 +233,23 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[slu
           </Container>
         </section>
       ) : null}
+
+      {/* Móvil: precio y contacto siempre a mano (reemplaza al botón flotante de WhatsApp). */}
+      <div
+        data-vehicle-bar
+        className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-3 border-t border-white/10 bg-ink/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-lg lg:hidden"
+      >
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs text-mist">
+            {v.make} {v.model}
+            {v.year ? ` · ${v.year}` : null}
+          </p>
+          <p className="font-display text-2xl leading-none font-bold tracking-tight">{priceNode}</p>
+        </div>
+        <a href={waHref} target="_blank" rel="noopener noreferrer" className={buttonClasses("whatsapp", "md", "shrink-0 px-4")}>
+          <WhatsAppIcon className="shrink-0" /> {sold ? "Similar" : "Consultar"}
+        </a>
+      </div>
     </>
   );
 }

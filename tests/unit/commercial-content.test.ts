@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { featureList, parseCommercialContent, plainDescription } from "@/lib/instagram/commercial-content";
+import { extraKeyData, featureList, parseCommercialContent, plainDescription } from "@/lib/instagram/commercial-content";
 
 // Fragmentos del formato real de @autodealer.cl.
 const TUCSON = `🚙🔥 ¡ESPACIO, RENDIMIENTO Y CONFIABILIDAD COREANA: HYUNDAI TUCSON 2.0 CRDI DIESEL 2018! 🔥⛽
@@ -117,5 +117,34 @@ $12.690.000 💵
 
   it("caption vacío → null", () => {
     expect(parseCommercialContent("   ")).toBeNull();
+  });
+});
+
+describe("extraKeyData", () => {
+  it("deja solo los datos sin campo propio (sin repetir modelo, año, km, precio…)", () => {
+    const c = parseCommercialContent(`FORD RANGER RAPTOR
+📋 DATOS CLAVE
+Modelo: Ford Ranger Raptor V6
+Año: 2024
+Condición: Prácticamente nueva / Único dueño
+Kilometraje: 26.485 km
+Garantía: Vigente de fábrica
+Transmisión: Automática
+Precio Autodealer: $52.990.000`)!;
+    expect(extraKeyData(c)).toEqual([
+      { label: "Condición", value: "Prácticamente nueva / Único dueño" },
+      { label: "Garantía", value: "Vigente de fábrica" },
+    ]);
+  });
+
+  it("una nota entre paréntesis no se parte como título: texto", () => {
+    const c = parseCommercialContent(`FORD RANGER RAPTOR
+📋 DATOS CLAVE
+Precio: $52.990.000
+(Vs. 0 km puesta en calle: +$63.000.000 con gastos)
+🛠️ EQUIPAMIENTO DESTACADO
+🏁 Performance: Motor V6`)!;
+    const items = c.extra.flatMap((s) => s.items);
+    expect(items).toContainEqual({ text: "(Vs. 0 km puesta en calle: +$63.000.000 con gastos)" });
   });
 });

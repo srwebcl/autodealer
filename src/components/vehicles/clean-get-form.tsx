@@ -28,6 +28,9 @@ export function CleanGetForm({ action, defaults = {}, children, ...props }: Prop
     }
     const qs = params.toString();
     router.push(qs ? `${action}?${qs}` : action, { scroll: false });
+    // Si el formulario vive en un panel (popover) abierto, se cierra al aplicar.
+    const sheet = event.currentTarget.closest<HTMLElement>("[popover]");
+    if (sheet?.matches(":popover-open")) sheet.hidePopover();
   }
 
   return (

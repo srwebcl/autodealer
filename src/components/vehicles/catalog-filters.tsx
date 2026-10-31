@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { CloseIcon } from "@/components/ui/icons";
 import { formatClp } from "@/lib/utils/format";
 import {
   type CatalogFilters as Filters,
@@ -11,9 +12,10 @@ import {
 import { drivetrainLabels, fuelTypeLabels, transmissionLabels } from "@/lib/vehicles/labels";
 import type { CatalogFacets } from "@/server/vehicles/repository";
 import { CleanGetForm } from "./clean-get-form";
-import { inputClass, labelClass, selectClass } from "./form-styles";
+import { selectClass } from "./form-styles";
 
 export const FILTERS_FORM_ID = "filtros-catalogo";
+export const FILTERS_SHEET_ID = "panel-filtros";
 
 /** Escalones de precio dentro del rango real del inventario. */
 function priceSteps(min: number | null, max: number | null): number[] {
@@ -37,191 +39,173 @@ const fuelToParam = invert(fuelParam);
 const transmissionToParam = invert(transmissionParam);
 const drivetrainToParam = invert(drivetrainParam);
 
-function Field({ id, label, children }: { id: string; label: string; children: ReactNode }) {
+const legendClass = "mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-mist";
+
+function Section({ legend, children }: { legend: string; children: ReactNode }) {
   return (
-    <div>
-      <label htmlFor={id} className={labelClass}>
-        {label}
-      </label>
-      {children}
+    <div className="border-t border-white/8 py-5 first:border-t-0 first:pt-1">
+      <fieldset>
+        <legend className={legendClass}>{legend}</legend>
+        {children}
+      </fieldset>
     </div>
   );
 }
 
-function ChoiceGroup({
-  name,
-  legend,
-  options,
-  current,
-}: {
-  name: string;
-  legend: string;
-  options: { value: string; label: string; count: number }[];
-  current?: string;
-}) {
-  if (options.length === 0) return null;
+type Option = { value: string; label: string; count?: number };
+
+/** Opciones excluyentes como chips (radios nativos: funcionan sin JS y con teclado). */
+function Chips({ name, options, current, allLabel = "Todos" }: { name: string; options: Option[]; current?: string | number; allLabel?: string }) {
   return (
-    <fieldset>
-      <legend className={labelClass}>{legend}</legend>
-      <div className="flex flex-wrap gap-2">
-        {[{ value: "", label: "Todos", count: 0 }, ...options].map((o) => (
-          <label
-            key={o.value || "all"}
-            className="cursor-pointer rounded-sm border border-white/12 px-3 py-1.5 text-sm text-chalk/85 transition-colors hover:border-white/35 has-checked:border-brand-yellow has-checked:bg-brand-yellow has-checked:text-ink has-focus-visible:outline-2 has-focus-visible:outline-brand-yellow"
-          >
-            <input
-              type="radio"
-              name={name}
-              value={o.value}
-              defaultChecked={(current ?? "") === o.value}
-              className="sr-only"
-            />
-            {o.label}
-            {o.count ? <span className="ml-1 opacity-60">{o.count}</span> : null}
-          </label>
-        ))}
-      </div>
-    </fieldset>
+    <div className="flex flex-wrap gap-2">
+      {[{ value: "", label: allLabel }, ...options].map((o) => (
+        <label
+          key={o.value || "all"}
+          className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-sm border border-white/10 bg-white/[0.03] px-3 text-sm text-chalk/80 transition-colors select-none hover:border-white/30 hover:text-chalk has-checked:border-brand-yellow has-checked:bg-brand-yellow/10 has-checked:text-brand-yellow has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-brand-yellow"
+        >
+          <input type="radio" name={name} value={o.value} defaultChecked={String(current ?? "") === o.value} className="sr-only" />
+          {o.label}
+          {o.count ? <span className="text-xs tabular-nums opacity-55">{o.count}</span> : null}
+        </label>
+      ))}
+    </div>
   );
 }
 
+function Range({ children }: { children: [ReactNode, ReactNode] }) {
+  return (
+    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+      {children[0]}
+      <span aria-hidden className="text-mist">
+        –
+      </span>
+      {children[1]}
+    </div>
+  );
+}
+
+const sheetSelect = `${selectClass} h-10 bg-graphite-900`;
+
+/**
+ * Formulario completo de filtros dentro del panel lateral. Un solo <form> en el DOM:
+ * la búsqueda y el orden de la barra se asocian a él con el atributo form=.
+ */
 export function CatalogFiltersForm({ filters, facets }: { filters: Filters; facets: CatalogFacets }) {
   const years = yearRange(facets.yearMin, facets.yearMax);
   const prices = priceSteps(facets.priceMin, facets.priceMax);
   const kms = facets.mileageMax == null ? [] : KM_STEPS.filter((k) => k < facets.mileageMax! * 1.5);
   const active = countActiveFilters(filters);
+  const transmissions = facets.transmissions.map((t) => ({ value: transmissionToParam[t.value], label: transmissionLabels[t.value], count: t.count }));
+  const fuels = facets.fuelTypes
+    .filter((f) => f.value in fuelToParam)
+    .map((f) => ({ value: fuelToParam[f.value as keyof typeof fuelToParam], label: fuelTypeLabels[f.value], count: f.count }));
+  const drivetrains = facets.drivetrains.map((d) => ({ value: drivetrainToParam[d.value], label: drivetrainLabels[d.value], count: d.count }));
 
   return (
-    <CleanGetForm id={FILTERS_FORM_ID} action="/vehiculos" defaults={{ orden: "recientes" }} className="flex flex-col gap-5">
-      {/* El orden vive en la barra de resultados, asociado a este formulario con form=. */}
-      <Field id="f-q" label="Buscar">
-        <input
-          id="f-q"
-          name="q"
-          type="search"
-          defaultValue={filters.q}
-          placeholder="Marca, modelo o versión"
-          className={inputClass}
-        />
-      </Field>
+    <CleanGetForm id={FILTERS_FORM_ID} action="/vehiculos" defaults={{ orden: "recientes" }} className="flex h-full flex-col">
+      <div className="flex h-16 shrink-0 items-center justify-between border-b border-white/8 px-5">
+        <p className="font-display text-2xl font-extrabold uppercase italic tracking-tight">Filtros</p>
+        <button
+          type="button"
+          popoverTarget={FILTERS_SHEET_ID}
+          popoverTargetAction="hide"
+          className="-mr-2 grid size-10 place-items-center rounded-sm text-mist hover:bg-white/5 hover:text-chalk"
+          aria-label="Cerrar filtros"
+        >
+          <CloseIcon />
+        </button>
+      </div>
 
-      {facets.makes.length > 0 ? (
-        <Field id="f-marca" label="Marca">
-          <select id="f-marca" name="marca" defaultValue={filters.marca ?? ""} className={selectClass}>
-            <option value="">Todas</option>
-            {facets.makes.map((m) => (
-              <option key={m.value} value={m.value}>
-                {m.value} ({m.count})
-              </option>
-            ))}
-          </select>
-        </Field>
-      ) : null}
+      <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4">
+        {facets.makes.length > 0 ? (
+          <Section legend="Marca">
+            <Chips name="marca" allLabel="Todas" current={filters.marca} options={facets.makes.map((m) => ({ value: m.value, label: m.value, count: m.count }))} />
+          </Section>
+        ) : null}
 
-      {years.length > 0 ? (
-        <div className="grid grid-cols-2 gap-3">
-          <Field id="f-anio-min" label="Año desde">
-            <select id="f-anio-min" name="anioMin" defaultValue={filters.anioMin ?? ""} className={selectClass}>
-              <option value="">Todos</option>
-              {years.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field id="f-anio-max" label="Año hasta">
-            <select id="f-anio-max" name="anioMax" defaultValue={filters.anioMax ?? ""} className={selectClass}>
-              <option value="">Todos</option>
-              {years.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </div>
-      ) : null}
+        {prices.length > 0 ? (
+          <Section legend="Precio">
+            <Range>
+              <select name="precioMin" aria-label="Precio desde" defaultValue={filters.precioMin ?? ""} className={sheetSelect}>
+                <option value="">Desde</option>
+                {prices.map((p) => (
+                  <option key={p} value={p}>
+                    {formatClp(p)}
+                  </option>
+                ))}
+              </select>
+              <select name="precioMax" aria-label="Precio hasta" defaultValue={filters.precioMax ?? ""} className={sheetSelect}>
+                <option value="">Hasta</option>
+                {prices.map((p) => (
+                  <option key={p} value={p}>
+                    {formatClp(p)}
+                  </option>
+                ))}
+              </select>
+            </Range>
+          </Section>
+        ) : null}
 
-      {prices.length > 0 ? (
-        <div className="grid grid-cols-2 gap-3">
-          <Field id="f-precio-min" label="Precio desde">
-            <select id="f-precio-min" name="precioMin" defaultValue={filters.precioMin ?? ""} className={selectClass}>
-              <option value="">Mínimo</option>
-              {prices.map((p) => (
-                <option key={p} value={p}>
-                  {formatClp(p)}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field id="f-precio-max" label="Precio hasta">
-            <select id="f-precio-max" name="precioMax" defaultValue={filters.precioMax ?? ""} className={selectClass}>
-              <option value="">Máximo</option>
-              {prices.map((p) => (
-                <option key={p} value={p}>
-                  {formatClp(p)}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </div>
-      ) : null}
+        {years.length > 0 ? (
+          <Section legend="Año">
+            <Range>
+              <select name="anioMin" aria-label="Año desde" defaultValue={filters.anioMin ?? ""} className={sheetSelect}>
+                <option value="">Desde</option>
+                {years.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+              <select name="anioMax" aria-label="Año hasta" defaultValue={filters.anioMax ?? ""} className={sheetSelect}>
+                <option value="">Hasta</option>
+                {years.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </Range>
+          </Section>
+        ) : null}
 
-      {kms.length > 0 ? (
-        <Field id="f-km" label="Kilometraje máximo">
-          <select id="f-km" name="kmMax" defaultValue={filters.kmMax ?? ""} className={selectClass}>
-            <option value="">Cualquiera</option>
-            {kms.map((k) => (
-              <option key={k} value={k}>
-                Hasta {k.toLocaleString("es-CL")} km
-              </option>
-            ))}
-          </select>
-        </Field>
-      ) : null}
+        {kms.length > 0 ? (
+          <Section legend="Kilometraje">
+            <Chips name="kmMax" allLabel="Cualquiera" current={filters.kmMax} options={kms.map((k) => ({ value: String(k), label: `Hasta ${k / 1000}.000 km` }))} />
+          </Section>
+        ) : null}
 
-      <ChoiceGroup
-        name="transmision"
-        legend="Transmisión"
-        current={filters.transmision}
-        options={facets.transmissions.map((t) => ({
-          value: transmissionToParam[t.value],
-          label: transmissionLabels[t.value],
-          count: t.count,
-        }))}
-      />
-      <ChoiceGroup
-        name="combustible"
-        legend="Combustible"
-        current={filters.combustible}
-        options={facets.fuelTypes
-          .filter((f) => f.value in fuelToParam)
-          .map((f) => ({ value: fuelToParam[f.value as keyof typeof fuelToParam], label: fuelTypeLabels[f.value], count: f.count }))}
-      />
-      <ChoiceGroup
-        name="traccion"
-        legend="Tracción"
-        current={filters.traccion}
-        options={facets.drivetrains.map((d) => ({
-          value: drivetrainToParam[d.value],
-          label: drivetrainLabels[d.value],
-          count: d.count,
-        }))}
-      />
+        {transmissions.length > 0 ? (
+          <Section legend="Transmisión">
+            <Chips name="transmision" current={filters.transmision} options={transmissions} />
+          </Section>
+        ) : null}
+        {fuels.length > 0 ? (
+          <Section legend="Combustible">
+            <Chips name="combustible" current={filters.combustible} options={fuels} />
+          </Section>
+        ) : null}
+        {drivetrains.length > 0 ? (
+          <Section legend="Tracción">
+            <Chips name="traccion" current={filters.traccion} options={drivetrains} />
+          </Section>
+        ) : null}
+      </div>
 
-      <div className="flex flex-col gap-2 pt-1">
+      <div className="grid shrink-0 grid-cols-[auto_1fr] items-center gap-3 border-t border-white/8 bg-graphite-950 px-5 py-4">
+        {active > 0 ? (
+          <Link href="/vehiculos" scroll={false} className="px-2 text-sm font-medium text-mist underline-offset-4 hover:text-chalk hover:underline">
+            Limpiar
+          </Link>
+        ) : (
+          <span />
+        )}
         <button
           type="submit"
-          className="h-11 rounded-sm bg-brand-red text-sm font-semibold uppercase tracking-[0.08em] text-white transition-colors hover:bg-brand-red-hover"
+          className="h-12 rounded-sm bg-brand-red text-sm font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-brand-red-hover"
         >
-          Aplicar filtros
+          Ver resultados
         </button>
-        {active > 0 ? (
-          <Link href="/vehiculos" scroll={false} className="py-2 text-center text-sm text-mist underline-offset-4 hover:text-chalk hover:underline">
-            Limpiar filtros
-          </Link>
-        ) : null}
       </div>
     </CleanGetForm>
   );
