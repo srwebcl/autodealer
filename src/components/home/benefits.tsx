@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { Container } from "@/components/layout/container";
-import { DraftBadge } from "@/components/ui/draft-badge";
 import { DocumentIcon, PercentIcon, SwapIcon, WhatsAppIcon } from "@/components/ui/icons";
 import { SectionHeading } from "@/components/ui/section-heading";
 
@@ -41,7 +40,6 @@ export function Benefits() {
           id="benefits-title"
           eyebrow="Por qué AutoDealer"
           title="Comprar tu auto, sin vueltas"
-          aside={<DraftBadge />}
         />
         <ul className="mt-12 grid gap-px overflow-hidden rounded-md border border-white/8 bg-white/8 sm:grid-cols-2 lg:grid-cols-4">
           {BENEFITS.map((b, i) => (

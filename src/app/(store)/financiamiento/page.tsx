@@ -4,7 +4,7 @@ import { PageHero } from "@/components/layout/page-hero";
 
 export const metadata: Metadata = {
   title: "Financiamiento",
-  robots: { index: false, follow: true }, // texto provisional
+  robots: { index: false, follow: true }, // sin indexar hasta aprobar su contenido
 };
 
 export default function FinancingPage() {

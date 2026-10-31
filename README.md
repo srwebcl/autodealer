@@ -160,7 +160,7 @@ tests/unit/                 # Vitest
 
 ## Contenido provisional (revisar antes del lanzamiento)
 
-Busca `DraftBadge`, `draft` y `BORRADOR` en el código. Hoy incluye:
+Ya no se marcan en pantalla (el cliente pidió quitar la etiqueta "Texto provisional"), pero siguen pendientes de aprobación:
 
 - Beneficios de la portada (`src/components/home/benefits.tsx`).
 - Textos de "Vende tu auto" y "Financiamiento".

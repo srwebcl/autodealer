@@ -1,6 +1,5 @@
 import { Container } from "@/components/layout/container";
 import { ButtonLink, buttonClasses } from "@/components/ui/button-link";
-import { DraftBadge } from "@/components/ui/draft-badge";
 import { ArrowRightIcon, WhatsAppIcon } from "@/components/ui/icons";
 import { whatsappUrl } from "@/lib/whatsapp";
 
@@ -14,10 +13,9 @@ export function SellBand() {
             className="absolute inset-y-0 -right-10 -z-10 w-[55%] -skew-x-[20deg] bg-[linear-gradient(90deg,rgba(0,0,0,0.18)_0_40%,var(--color-brand-yellow)_40%_52%,rgba(0,0,0,0.28)_52%_100%)] max-md:opacity-40"
           />
           <div className="max-w-xl">
-            <DraftBadge />
             <h2
               id="sell-title"
-              className="mt-4 font-display text-4xl leading-[0.95] font-extrabold uppercase italic tracking-tight text-balance sm:text-5xl"
+              className="font-display text-4xl leading-[0.95] font-extrabold uppercase italic tracking-tight text-balance sm:text-5xl"
             >
               ¿Quieres vender o cambiar tu auto?
             </h2>
