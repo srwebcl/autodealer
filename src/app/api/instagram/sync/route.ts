@@ -1,7 +1,8 @@
 import { revalidateTag } from "next/cache";
-import { connection } from "next/server";
+import { after, connection } from "next/server";
 import { db } from "@/lib/db";
 import { isAuthorizedCron } from "@/lib/security/cron-auth";
+import { submitIndexNow } from "@/lib/seo/indexnow";
 import { createSyncSetup } from "@/server/instagram/setup";
 import { runSync } from "@/server/instagram/sync";
 import { VEHICLES_TAG } from "@/server/vehicles/queries";
@@ -22,13 +23,26 @@ async function handle(request: Request, trigger: "CRON" | "MANUAL") {
     return Response.json({ error: "Sincronización no configurada" }, { status: 503 });
   }
 
+  const startedAt = new Date();
   const result = await runSync(setup.deps, trigger, setup.options);
   if (result.status === "locked") {
     return Response.json({ status: "locked", message: "Ya hay una sincronización en curso" }, { status: 409 });
   }
   // Expira de inmediato (no stale-while-revalidate): con "max", rutas como el sitemap se
   // regeneraban leyendo la caché interna aún antigua y quedaban desfasadas hasta 1 h.
-  if (result.changed) revalidateTag(VEHICLES_TAG, { expire: 0 });
+  if (result.changed) {
+    revalidateTag(VEHICLES_TAG, { expire: 0 });
+    // Avisa a los buscadores (IndexNow) las fichas creadas, editadas o retiradas en esta ejecución.
+    after(async () => {
+      try {
+        const touched = await db.vehicle.findMany({ where: { updatedAt: { gte: startedAt } }, select: { slug: true } });
+        const r = await submitIndexNow(["/", "/vehiculos", ...touched.map((v) => `/vehiculos/${v.slug}`)]);
+        console.info("[indexnow]", JSON.stringify(r));
+      } catch (error) {
+        console.warn("[indexnow] no se pudo avisar:", error instanceof Error ? error.message : error);
+      }
+    });
+  }
 
   console.info("[instagram-sync]", trigger, result.status, JSON.stringify(result.stats));
   return Response.json(

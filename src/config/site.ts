@@ -19,6 +19,8 @@ export const siteConfig = {
 
   // confirmed
   address: "Avenida Balmaceda 1595, esquina Huanhualí, La Serena",
+  /** Calle y número, para datos estructurados (schema.org PostalAddress). */
+  streetAddress: "Avenida Balmaceda 1595",
   phoneDisplay: "+56 9 6754 6248",
   phoneE164: "+56967546248",
   whatsappNumber: "56967546248",

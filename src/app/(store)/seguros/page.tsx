@@ -6,8 +6,8 @@ import { PageHero } from "@/components/layout/page-hero";
 import { insurancePartner } from "@/config/partners";
 
 export const metadata: Metadata = {
-  title: "Seguro automotriz",
-  description: "Cotiza el seguro de tu auto con BCI Seguros a través de AutoDealer, La Serena. Convenio directo.",
+  title: "Seguro automotriz en La Serena con BCI Seguros",
+  description: "Seguro automotriz en La Serena: cotiza el seguro de tu auto con BCI Seguros a través de AutoDealer. Convenio directo.",
   alternates: { canonical: "/seguros" },
 };
 

@@ -20,8 +20,9 @@ export async function generateMetadata({ searchParams }: PageProps<"/vehiculos">
   const filters = parseCatalogFilters(await searchParams);
   const filtered = countActiveFilters(filters) > 0 || filters.orden !== "recientes";
   return {
-    title: filters.pagina > 1 ? `Vehículos disponibles – página ${filters.pagina}` : "Vehículos disponibles",
-    description: "Catálogo de autos disponibles en AutoDealer, La Serena. Filtra por marca, año, precio y más.",
+    title: filters.pagina > 1 ? `Autos usados en venta en La Serena – página ${filters.pagina}` : "Autos usados en venta en La Serena",
+    description:
+      "Autos usados en venta en La Serena: camionetas, SUV y más, con fotos, precio y kilometraje. Filtra por marca, año y precio en AutoDealer.",
     // Las combinaciones de filtros no se indexan; la paginación sí, con URL propia.
     alternates: { canonical: filters.pagina > 1 && !filtered ? `/vehiculos?pagina=${filters.pagina}` : "/vehiculos" },
     robots: !siteConfig.indexable ? { index: false, follow: false } : filtered ? { index: false, follow: true } : undefined,

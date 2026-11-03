@@ -9,8 +9,9 @@ import { ArrowRightIcon } from "@/components/ui/icons";
 import { financingPartners } from "@/config/partners";
 
 export const metadata: Metadata = {
-  title: "Financiamiento automotriz",
-  description: "Financia tu auto en AutoDealer, La Serena. Trabajamos con Autofin, Global y Unidad Crédito, entre otras financieras.",
+  title: "Crédito automotriz en La Serena",
+  description:
+    "Financia tu auto en AutoDealer, La Serena, con Autofin, Global, Unidad Crédito y otras financieras. Evaluamos tu crédito con respuesta rápida.",
   alternates: { canonical: "/financiamiento" },
 };
 

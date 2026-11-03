@@ -69,7 +69,7 @@ export function vehicleJsonLd(v: VehicleDetailData, url: string): Record<string,
       availability: avail,
       itemCondition: "https://schema.org/UsedCondition",
       url,
-      seller: { "@type": "AutoDealer", name: siteConfig.name, address: siteConfig.address },
+      seller: { "@type": "AutoDealer", "@id": absoluteUrl("/#automotora"), name: siteConfig.name, address: siteConfig.address },
     };
   }
   return data;

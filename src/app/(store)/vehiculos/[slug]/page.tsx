@@ -20,6 +20,7 @@ import { VehicleGallery } from "@/components/vehicles/vehicle-gallery";
 import { VehicleGrid } from "@/components/vehicles/vehicle-grid";
 import { siteConfig } from "@/config/site";
 import { extraKeyData } from "@/lib/instagram/commercial-content";
+import { breadcrumbJsonLd } from "@/lib/seo/business";
 import { absoluteUrl } from "@/lib/seo/urls";
 import {
   vehicleDisplayName,
@@ -50,12 +51,14 @@ export async function generateMetadata({
   const v = await getVehicleBySlug(slug);
   if (!v) return { title: "Vehículo no encontrado", robots: { index: false } };
 
+  // "Ford Ranger Raptor V6 2025 | AutoDealer La Serena": la ciudad ayuda en búsquedas locales.
   const title = vehicleDisplayName(v);
+  const fullTitle = `${title} | ${siteConfig.name} ${siteConfig.city}`;
   const description = vehicleMetaDescription(v);
   const path = `/vehiculos/${v.slug}`;
   const cover = v.images[0];
   return {
-    title,
+    title: { absolute: fullTitle },
     description,
     alternates: { canonical: path },
     // Vendidos no se indexan.
@@ -67,7 +70,7 @@ export async function generateMetadata({
     openGraph: {
       type: "website",
       url: path,
-      title,
+      title: fullTitle,
       description,
       ...(cover ? { images: [{ url: cover.src, alt: cover.alt }] } : {}),
     },
@@ -120,6 +123,14 @@ export default async function VehiclePage({
   return (
     <>
       <JsonLd data={vehicleJsonLd(v, url)} />
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Inicio", path: "/" },
+          { name: "Vehículos", path: "/vehiculos" },
+          { name: v.make, path: `/vehiculos?marca=${encodeURIComponent(v.make)}` },
+          { name, path: `/vehiculos/${v.slug}` },
+        ])}
+      />
 
       <Container className="pt-20 pb-28 sm:pt-28 lg:pb-20">
         {/* Escritorio: el bloque mide galería (cuadrada, alto de pantalla) + ficha, y se centra: sin hueco entre ambas. */}

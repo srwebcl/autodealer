@@ -9,8 +9,9 @@ import { ConsignmentPoints } from "@/components/sell/consignment-points";
 import { ArrowRightIcon } from "@/components/ui/icons";
 
 export const metadata: Metadata = {
-  title: "Vende tu auto",
-  description: "Deja tu auto en consignación o entrégalo en parte de pago en AutoDealer, La Serena.",
+  title: "Vende o consigna tu auto en La Serena",
+  description:
+    "Vende tu auto de forma segura en La Serena: consignación con contrato transparente y pago 100% garantizado, o déjalo en parte de pago en AutoDealer.",
   alternates: { canonical: "/vende-tu-auto" },
 };
 

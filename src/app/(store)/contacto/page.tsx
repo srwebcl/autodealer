@@ -11,8 +11,9 @@ import { siteConfig } from "@/config/site";
 import { whatsappUrl } from "@/lib/whatsapp";
 
 export const metadata: Metadata = {
-  title: "Contacto",
-  description: "Dirección, teléfono, email y horario de AutoDealer en La Serena.",
+  title: "Contacto, dirección y horario en La Serena",
+  description:
+    "AutoDealer en Av. Balmaceda 1595, esquina Huanhualí, La Serena. Lunes a viernes de 08:30 a 18:30 y sábado de 10:00 a 14:00. Teléfono, WhatsApp y email.",
   alternates: { canonical: "/contacto" },
 };
 
