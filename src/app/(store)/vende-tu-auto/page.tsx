@@ -11,7 +11,7 @@ import { ArrowRightIcon } from "@/components/ui/icons";
 export const metadata: Metadata = {
   title: "Vende tu auto",
   description: "Deja tu auto en consignación o entrégalo en parte de pago en AutoDealer, La Serena.",
-  robots: { index: false, follow: true }, // sin indexar hasta aprobar su contenido
+  alternates: { canonical: "/vende-tu-auto" },
 };
 
 /** Bloque de cada opción: etiqueta pequeña, título y texto de entrada. */

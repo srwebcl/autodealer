@@ -64,16 +64,18 @@ export function Hero() {
       </div>
 
       <Container className="flex flex-1 flex-col justify-end pt-[22svh] pb-6 md:flex-none md:pt-32 md:pb-10">
-        <div className="max-w-2xl">
-          <p className="eyebrow flex items-center gap-3">
-            <span className="brand-stripe hero-stripe-in" style={delay(0.35)} aria-hidden />
-            <span className="hero-rise" style={delay(0.45)}>
-              Tu automotora de confianza en {siteConfig.city}
+        {/* Móvil: todo centrado (la franja de marca va sobre el pretítulo). Escritorio: alineado a la izquierda. */}
+        <div className="max-w-2xl max-md:mx-auto max-md:text-center">
+          <p className="eyebrow flex items-center gap-3 max-md:flex-col max-md:gap-3.5 max-md:tracking-[0.2em]">
+            <span className="brand-stripe hero-stripe-in max-md:origin-center" style={delay(0.35)} aria-hidden />
+            <span className="hero-rise max-md:leading-relaxed" style={delay(0.45)}>
+              Tu automotora de confianza <br className="md:hidden" />
+              en {siteConfig.city}
             </span>
           </p>
           <h1
             id="hero-title"
-            className="mt-6 font-display text-[clamp(3rem,9vw,6.5rem)] leading-[0.88] font-extrabold uppercase italic tracking-[-0.01em] text-balance"
+            className="mt-6 font-display max-md:mt-4 text-[clamp(3rem,9vw,6.5rem)] leading-[0.88] font-extrabold uppercase italic tracking-[-0.01em] text-balance"
           >
             <Word at={0.55}>Tu</Word> <Word at={0.65}>próximo</Word> <Word at={0.75}>auto</Word>{" "}
             <span className="text-brand-yellow">
@@ -89,7 +91,7 @@ export function Hero() {
               </Word>
             </span>
           </h1>
-          <p className="hero-rise mt-6 max-w-lg text-lg leading-relaxed text-chalk/80" style={delay(1.15)}>
+          <p className="hero-rise mt-6 max-w-lg text-lg leading-relaxed text-pretty text-chalk/80 max-md:mx-auto max-md:mt-5 max-md:max-w-[22rem] max-md:text-base" style={delay(1.15)}>
             Revisa los vehículos disponibles, compara y cotiza directo por WhatsApp. Te esperamos en Avenida Balmaceda,
             La Serena.
           </p>
@@ -106,8 +108,9 @@ export function Hero() {
               <WhatsAppIcon /> Cotizar por WhatsApp
             </a>
           </div>
-          <p className="hero-rise mt-6 flex items-center gap-2 text-sm text-mist" style={delay(1.45)}>
-            <PinIcon width={16} height={16} /> {siteConfig.address}
+          <p className="hero-rise mt-6 flex items-center gap-2 text-sm text-mist max-md:block max-md:text-balance" style={delay(1.45)}>
+            <PinIcon width={16} height={16} className="shrink-0 max-md:mr-1.5 max-md:inline max-md:-translate-y-px" />
+            {siteConfig.address}
           </p>
         </div>
       </Container>
