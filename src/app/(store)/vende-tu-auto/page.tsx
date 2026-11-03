@@ -4,6 +4,7 @@ import { LeadForm } from "@/components/forms/lead-form";
 import { LeadPageLayout, Steps, SubHeading } from "@/components/forms/lead-page";
 import { Container } from "@/components/layout/container";
 import { PageHero } from "@/components/layout/page-hero";
+import { ConsignmentPoints } from "@/components/sell/consignment-points";
 import { ArrowRightIcon } from "@/components/ui/icons";
 
 export const metadata: Metadata = {
@@ -25,6 +26,8 @@ export default function SellYourCarPage() {
       >
         <p>Recibimos vehículos en consignación y como parte de pago. Cuéntanos de tu auto y te contactamos para coordinar una evaluación.</p>
       </PageHero>
+
+      <ConsignmentPoints />
 
       <Container className="py-14 sm:py-20">
         <LeadPageLayout

@@ -1,14 +1,14 @@
 import Image from "next/image";
 import { Container } from "@/components/layout/container";
 import { ButtonLink, buttonClasses } from "@/components/ui/button-link";
-import { ArrowRightIcon, KeyIcon, SwapIcon, WhatsAppIcon } from "@/components/ui/icons";
+import Link from "next/link";
+import { ArrowRightIcon, WhatsAppIcon } from "@/components/ui/icons";
+import { CONSIGNMENT_POINTS } from "@/config/consignment";
 import { whatsappUrl } from "@/lib/whatsapp";
 import carPhoto from "../../../public/images/hero/bmw-m4-hangar.jpg";
 
-const MODES = [
-  { label: "Consignación", Icon: KeyIcon },
-  { label: "Parte de pago", Icon: SwapIcon },
-];
+// Resumen de los puntos clave de la consignación (detalle en /vende-tu-auto).
+const KEY_POINTS = CONSIGNMENT_POINTS.flatMap((p) => (p.short ? [p.short] : []));
 
 function CarPhoto({ className, sizes }: { className: string; sizes: string }) {
   return (
@@ -54,16 +54,24 @@ export function SellBand() {
             <p className="mt-5 max-w-md text-base leading-relaxed text-white/90 sm:text-lg">
               Cuéntanos qué vehículo tienes y te contactamos para evaluarlo, en consignación o como parte de pago.
             </p>
-            <ul className="mt-6 flex flex-wrap gap-2">
-              {MODES.map(({ label, Icon }) => (
-                <li
-                  key={label}
-                  className="inline-flex items-center gap-2 rounded-full bg-black/20 px-3.5 py-2 text-[13px] font-semibold sm:px-4 sm:text-sm text-white ring-1 ring-white/25"
-                >
-                  <Icon width={16} height={16} className="text-brand-yellow" /> {label}
+            <ul className="mt-6 grid gap-x-6 gap-y-2.5 sm:grid-cols-2 md:grid-cols-1">
+              {KEY_POINTS.map((label) => (
+                <li key={label} className="flex items-center gap-2.5 text-[0.95rem] font-semibold text-white">
+                  <span aria-hidden className="grid size-5 shrink-0 place-items-center rounded-full bg-brand-yellow text-ink">
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="3.2">
+                      <path d="M5 12.5l4.5 4.5L19 7.5" />
+                    </svg>
+                  </span>
+                  {label}
                 </li>
               ))}
             </ul>
+            <Link
+              href="/vende-tu-auto#consignacion"
+              className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-white/85 underline decoration-white/30 underline-offset-4 hover:text-white"
+            >
+              Ver los 5 puntos clave de la consignación
+            </Link>
             <div className="mt-9 flex flex-col gap-3 *:whitespace-nowrap sm:flex-row md:flex-col md:items-start xl:flex-row">
               <ButtonLink href="/vende-tu-auto#formulario" size="lg" className="bg-ink! text-chalk shadow-[0_12px_30px_-12px_rgba(0,0,0,0.8)] hover:bg-graphite-800!">
                 Cotiza tu auto <ArrowRightIcon className="transition-transform group-hover:translate-x-1" />
