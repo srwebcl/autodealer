@@ -68,7 +68,7 @@ export function Hero() {
           <p className="eyebrow flex items-center gap-3">
             <span className="brand-stripe hero-stripe-in" style={delay(0.35)} aria-hidden />
             <span className="hero-rise" style={delay(0.45)}>
-              Automotora en {siteConfig.city}
+              Tu automotora de confianza en {siteConfig.city}
             </span>
           </p>
           <h1
