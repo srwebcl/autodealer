@@ -2,7 +2,7 @@ import { GoogleG, GoogleStars } from "@/components/home/google-brand";
 import { CONSIGNMENT_POINTS, CONSIGNMENT_TITLE } from "@/config/consignment";
 import { googleReviews } from "@/config/google-reviews";
 
-/** Los 5 puntos clave de la consignación, como lista numerada dentro del bloque "Consignación". */
+/** Los puntos clave de la consignación, como lista numerada dentro del bloque "Consignación". */
 export function ConsignmentPoints() {
   const rating = googleReviews.rating;
   return (

@@ -8,7 +8,7 @@ import { whatsappUrl } from "@/lib/whatsapp";
 import carPhoto from "../../../public/images/hero/bmw-m4-hangar.jpg";
 
 // Resumen de los puntos clave de la consignación (detalle en /vende-tu-auto).
-const KEY_POINTS = CONSIGNMENT_POINTS.flatMap((p) => (p.short ? [p.short] : []));
+const KEY_POINTS = CONSIGNMENT_POINTS.map((p) => p.title);
 
 function CarPhoto({ className, sizes }: { className: string; sizes: string }) {
   return (
@@ -70,7 +70,7 @@ export function SellBand() {
               href="/vende-tu-auto#consignacion"
               className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-white/85 underline decoration-white/30 underline-offset-4 hover:text-white"
             >
-              Ver los 5 puntos clave de la consignación
+              Ver los puntos clave de la consignación
             </Link>
             <div className="mt-9 flex flex-col gap-3 *:whitespace-nowrap sm:flex-row md:flex-col md:items-start xl:flex-row">
               <ButtonLink href="/vende-tu-auto#formulario" size="lg" className="bg-ink! text-chalk shadow-[0_12px_30px_-12px_rgba(0,0,0,0.8)] hover:bg-graphite-800!">
