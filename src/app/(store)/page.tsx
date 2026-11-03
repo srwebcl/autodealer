@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Benefits } from "@/components/home/benefits";
 import { FeaturedVehicles } from "@/components/home/featured-vehicles";
 import { GoogleReviews } from "@/components/home/google-reviews";
@@ -5,6 +6,8 @@ import { Hero } from "@/components/home/hero";
 import { SellBand } from "@/components/home/sell-band";
 import { VisitUs } from "@/components/home/visit-us";
 import { getFeaturedVehicles } from "@/server/vehicles/queries";
+
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 export default async function HomePage() {
   // Consulta cacheada ("use cache"): la portada sigue siendo estática y se invalida con la etiqueta "vehicles".

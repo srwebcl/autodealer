@@ -13,6 +13,7 @@ import { whatsappUrl } from "@/lib/whatsapp";
 export const metadata: Metadata = {
   title: "Contacto",
   description: "Dirección, teléfono, email y horario de AutoDealer en La Serena.",
+  alternates: { canonical: "/contacto" },
 };
 
 const query = encodeURIComponent(siteConfig.address);
