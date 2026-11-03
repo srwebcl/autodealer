@@ -122,7 +122,7 @@ Copia `.env.example` a `.env.local`. **Nunca** subas `.env.local` a Git ni compa
 
 | Variable | Fase | Uso |
 | --- | --- | --- |
-| `NEXT_PUBLIC_SITE_URL` | 1 | URL base para metadata y enlaces canónicos |
+| `NEXT_PUBLIC_SITE_URL` | 1 | URL base para metadata y enlaces canónicos. Con `https://www.autodealer.cl`, autodealer.cl y autodealer-eight.vercel.app redirigen a www (308, salvo `/api`) |
 | `DATABASE_URL` | 2 | Neon con pooling (runtime) |
 | `DATABASE_URL_UNPOOLED` | 2 | Neon directa (migraciones) |
 | `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` | 4 | Sesiones del panel |
@@ -134,6 +134,12 @@ Copia `.env.example` a `.env.local`. **Nunca** subas `.env.local` a Git ni compa
 | `NEXT_PUBLIC_SITE_INDEXABLE` | 7 | `true` solo en el dominio final |
 | `TOKEN_ENCRYPTION_KEY` | 5 | Cifrado del token en Neon (idéntica en todos los entornos) |
 | `CRON_SECRET` | 5 | Protege la ruta de sincronización programada |
+| `RESEND_API_KEY` | 6 | Envío de correos de los formularios (solo servidor) |
+| `EMAIL_FROM` | 6 | Remitente (dominio verificado en Resend). Por defecto `AutoDealer <notificaciones@autodealer.cl>` |
+| `LEADS_NOTIFY_TO` | 6 | Destinatarios del aviso interno, separados por coma. Por defecto `cplacencia@autodealer.cl` |
+| `EMAIL_REPLY_TO` | 6 | Respuestas del cliente a la confirmación. Por defecto `contacto@autodealer.cl` |
+| `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`, `RECAPTCHA_SECRET_KEY` | 6 | reCAPTCHA v3 (ambas o ninguna) |
+| `RECAPTCHA_MIN_SCORE` | 6 | Opcional, puntaje mínimo (0,5) |
 
 ## Estructura
 
@@ -162,7 +168,9 @@ tests/unit/                 # Vitest
 
 - Páginas `/financiamiento` (Autofin, Global, Unidad Crédito, entre otras) y `/seguros` (convenio directo con BCI Seguros), según lo informado por el cliente. Logos en `public/brand/partners/`.
 - Server Action `submitLead` (`src/server/leads/actions.ts`): validación con Zod en servidor (teléfono chileno normalizado a +56…, patente, año), campo trampa contra bots y máximo 5 envíos por hora por visitante (hash de IP, nunca la IP en claro).
-- Cada solicitud se guarda en la tabla `Lead` y el visitante puede enviar el resumen por WhatsApp. **No se envía email**: requiere un servicio de correo (pendiente de autorización).
+- Cada solicitud se guarda en la tabla `Lead` y el visitante puede enviar el resumen por WhatsApp.
+- **Correos (Resend):** tras guardar, y sin hacer esperar al visitante (`after()`), se envían dos correos (`src/server/leads/notify.ts`, plantillas en `src/lib/leads/emails.ts`): el aviso interno con la solicitud completa a `LEADS_NOTIFY_TO` (por defecto cplacencia@autodealer.cl; responder le escribe al cliente) y la confirmación al cliente (responder llega a `EMAIL_REPLY_TO`, por defecto contacto@autodealer.cl). HTML simple con logo y versión de texto plano. Si un envío falla, la solicitud igual queda guardada y el error aparece en los logs de Vercel (`[leads] correo … falló`, solo con el ID).
+- **reCAPTCHA v3:** se activa solo con `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` y `RECAPTCHA_SECRET_KEY` juntas. Al enviar se pide un token (acción `lead_<formulario>`) y el servidor lo valida (puntaje mínimo `RECAPTCHA_MIN_SCORE`, 0,5 por defecto). El sello flotante se oculta (chocaría con el botón de WhatsApp) y el formulario muestra el aviso de Google, como exige Google.
 - Datos obligatorios en todos los formularios: nombre, teléfono y email. Cada página pide además lo propio de su intención (auto de interés y pie, auto a asegurar, modalidad y datos del auto, motivo y mensaje).
 - Revisar solicitudes: `npm run leads:list -- --dias=7` (hasta que exista el panel de la Fase 4).
 - La ficha de cada vehículo enlaza a `/financiamiento?vehiculo=…` con el auto prellenado.

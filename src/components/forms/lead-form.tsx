@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { type ReactNode, useActionState, useId, useState } from "react";
+import Script from "next/script";
+import { type FormEvent, type ReactNode, useActionState, useId, useState } from "react";
 import { buttonClasses } from "@/components/ui/button-link";
 import { ArrowRightIcon, WhatsAppIcon } from "@/components/ui/icons";
 import { Select } from "@/components/ui/select";
@@ -13,7 +14,50 @@ import {
   SELL_MODE_OPTIONS,
   WORKER_OPTIONS,
 } from "@/lib/leads/schema";
+import { RECAPTCHA_SITE_KEY, recaptchaAction } from "@/lib/security/recaptcha";
 import { type LeadFormState, submitLead } from "@/server/leads/actions";
+
+declare global {
+  interface Window {
+    grecaptcha?: { ready: (cb: () => void) => void; execute: (siteKey: string, opts: { action: string }) => Promise<string> };
+  }
+}
+
+/** Token de reCAPTCHA v3 para esta acción ("" si el script no cargó a tiempo). */
+function recaptchaToken(action: string): Promise<string> {
+  return new Promise((resolve) => {
+    const timer = window.setTimeout(() => resolve(""), 8000);
+    const done = (t: string) => {
+      window.clearTimeout(timer);
+      resolve(t);
+    };
+    const g = window.grecaptcha;
+    if (!g) return done("");
+    g.ready(() => g.execute(RECAPTCHA_SITE_KEY, { action }).then(done, () => done("")));
+  });
+}
+
+/**
+ * Con reCAPTCHA activo, el primer submit se detiene para pedir el token (vale 2 minutos y un solo
+ * uso) y luego se reenvía el formulario con el token en el campo oculto.
+ */
+function withRecaptcha(form: LeadFormType) {
+  return (ev: FormEvent<HTMLFormElement>) => {
+    if (!RECAPTCHA_SITE_KEY) return;
+    const el = ev.currentTarget;
+    const input = el.elements.namedItem("recaptcha") as HTMLInputElement | null;
+    if (!input || input.value) return;
+    ev.preventDefault();
+    if (el.dataset.verifying) return;
+    el.dataset.verifying = "1";
+    void recaptchaToken(recaptchaAction(form)).then((token) => {
+      delete el.dataset.verifying;
+      input.value = token || "sin-token";
+      el.requestSubmit();
+      input.value = "";
+    });
+  };
+}
 
 const FORMS: Record<LeadFormType, { page: string; submit: string; received: string; whatsappHint: string }> = {
   financiamiento: {
@@ -395,8 +439,9 @@ function FormBody({ form, defaultVehicle, onReset }: { form: LeadFormType; defau
   }
 
   return (
-    <form action={action} className="grid gap-7">
+    <form action={action} onSubmit={withRecaptcha(form)} className="grid gap-7">
       <input type="hidden" name="tipo" value={form} />
+      {RECAPTCHA_SITE_KEY ? <input type="hidden" name="recaptcha" defaultValue="" /> : null}
       <input type="hidden" name="pagina" value={FORMS[form].page} />
       {/* Campo trampa para bots: fuera de pantalla y fuera del orden de tabulación. */}
       <div aria-hidden className="absolute -left-[9999px] h-px w-px overflow-hidden">
@@ -422,6 +467,19 @@ function FormBody({ form, defaultVehicle, onReset }: { form: LeadFormType; defau
         <p className="mt-3 text-xs leading-relaxed text-mist">
           Al enviar aceptas que AutoDealer te contacte por teléfono, WhatsApp o email para gestionar tu solicitud.
         </p>
+        {RECAPTCHA_SITE_KEY ? (
+          <p className="mt-2 text-xs leading-relaxed text-mist/80">
+            Protegido por reCAPTCHA de Google:{" "}
+            <a href="https://policies.google.com/privacy?hl=es" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-chalk">
+              Privacidad
+            </a>{" "}
+            y{" "}
+            <a href="https://policies.google.com/terms?hl=es" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-chalk">
+              Condiciones
+            </a>
+            .
+          </p>
+        ) : null}
       </div>
     </form>
   );
@@ -430,5 +488,10 @@ function FormBody({ form, defaultVehicle, onReset }: { form: LeadFormType; defau
 /** Formulario de contacto según la página (financiamiento, seguro, venta o contacto general). */
 export function LeadForm({ form, defaultVehicle }: { form: LeadFormType; defaultVehicle?: string }) {
   const [key, setKey] = useState(0);
-  return <FormBody key={key} form={form} defaultVehicle={defaultVehicle} onReset={() => setKey((k) => k + 1)} />;
+  return (
+    <>
+      {RECAPTCHA_SITE_KEY ? <Script src={`https://www.google.com/recaptcha/api.js?render=${RECAPTCHA_SITE_KEY}&hl=es`} strategy="afterInteractive" /> : null}
+      <FormBody key={key} form={form} defaultVehicle={defaultVehicle} onReset={() => setKey((k) => k + 1)} />
+    </>
+  );
 }

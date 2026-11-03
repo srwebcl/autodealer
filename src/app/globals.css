@@ -304,3 +304,9 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* reCAPTCHA v3: el sello flotante chocaría con el botón de WhatsApp. Google permite ocultarlo
+   si el formulario muestra el aviso "Protegido por reCAPTCHA" con sus enlaces (lead-form.tsx). */
+.grecaptcha-badge {
+  visibility: hidden;
+}

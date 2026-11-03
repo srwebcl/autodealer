@@ -25,6 +25,6 @@ export async function createLead(db: Db, lead: ParsedLead, meta: { page?: string
       page: meta.page ?? null,
       ipHash: meta.ipHash ?? null,
     },
-    select: { id: true },
+    select: { id: true, createdAt: true },
   });
 }
