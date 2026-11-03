@@ -415,7 +415,7 @@ function FormBody({ form, defaultVehicle, onReset }: { form: LeadFormType; defau
       {steps}
 
       <div>
-        <button type="submit" disabled={pending} className={buttonClasses("primary", "lg", "w-full disabled:cursor-wait disabled:opacity-70")}>
+        <button type="submit" disabled={pending} className={buttonClasses("primary", "lg", "w-full whitespace-nowrap disabled:cursor-wait disabled:opacity-70 max-sm:px-4 max-sm:text-sm max-sm:tracking-[0.05em]")}>
           {pending ? "Enviando…" : FORMS[form].submit}
           {pending ? null : <ArrowRightIcon />}
         </button>

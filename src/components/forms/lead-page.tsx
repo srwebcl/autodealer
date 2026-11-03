@@ -33,11 +33,22 @@ export function Steps({ steps }: { steps: string[] }) {
  * Móvil: info → formulario → pasos. Escritorio: la columna de información queda fija
  * mientras el formulario (más largo) avanza con el scroll.
  */
-export function LeadPageLayout({ intro, form, after }: { intro: ReactNode; form: ReactNode; after: ReactNode }) {
+export function LeadPageLayout({
+  intro,
+  form,
+  after,
+  stickyInfo = true,
+}: {
+  intro: ReactNode;
+  form: ReactNode;
+  after: ReactNode;
+  /** Columna de información fija. Desactivar si es tan larga como el formulario. */
+  stickyInfo?: boolean;
+}) {
   return (
     <div className="grid items-start gap-x-16 gap-y-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,32rem)]">
-      {/* En móvil sus hijos se ordenan junto al formulario; en escritorio es una columna fija. */}
-      <div className="contents lg:sticky lg:top-26 lg:block lg:space-y-12">
+      {/* En móvil sus hijos se ordenan junto al formulario; en escritorio es una columna. */}
+      <div className={`contents lg:block lg:space-y-14 ${stickyInfo ? "lg:sticky lg:top-26" : ""}`}>
         <div className="order-1 min-w-0">{intro}</div>
         <div className="order-3 min-w-0">{after}</div>
       </div>
